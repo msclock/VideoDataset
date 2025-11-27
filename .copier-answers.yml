@@ -1,0 +1,30 @@
+_commit: v0.0.11
+_src_path: https://code.agibot.com/ai-platform/agibot-python.git
+author_email: genie@agibot.com
+author_name: genie
+container_registry_host: ''
+copyright_holder: agibot
+copyright_license: MIT License
+copyright_year: '2025'
+coverage_threshold: 70
+default_py: '3.12'
+development_status: Alpha
+env_tool: pipenv
+max_py: '3.14'
+min_py: '3.10'
+module_name: fast_context_queue
+organization_name: agibot
+package_name: fast-context-queue
+page_host: code.agibot.com
+platforms:
+- macos
+- linux
+- windows
+project_description: Fast Context Queue is a fast alternative to Python's multiprocessing.Queue.
+project_keywords: fast context queue
+project_name: Fast Context Queue
+readme_content: '## A multiline README content here'
+repo_host: code.agibot.com
+repo_name: fast-context-queue
+repo_namespace: ai-platform
+repo_platform: gitlab-self-managed
