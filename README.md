@@ -24,6 +24,10 @@ Fast Context Queue is a fast alternative to Python's multiprocessing.Queue.
 
 ## A multiline README content here
 
+## References
+
+- [Official implementation of multiprocessing.Queue](https://github.com/python/cpython/blob/main/Lib/multiprocessing/queues.py)
+
 ## 📜 License
 
 MIT License, for more details, see the [LICENSE](https://code.agibot.com/ai-platform/fast-context-queue/-/blob/main/LICENSE) file.
