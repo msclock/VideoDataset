@@ -11,7 +11,6 @@ A GPU-accelerated library that enables random frame access and efficient video d
 [![CI](https://github.com/AgiBot-World/videodataset/actions/workflows/ci.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/ci.yml)
 [![CD](https://github.com/AgiBot-World/videodataset/actions/workflows/cd.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/cd.yml)
 [![CommitLint](https://github.com/AgiBot-World/videodataset/actions/workflows/commitlint.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/commitlint.yml)
-[![Release](https://github.com/AgiBot-World/videodataset/actions/workflows/release.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/release.yml)
 [![Renovate](https://github.com/AgiBot-World/videodataset/actions/workflows/renovate.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/renovate.yml)
 [![Semantic Release](https://github.com/AgiBot-World/videodataset/actions/workflows/semantic-release.yml/badge.svg)](https://github.com/AgiBot-World/videodataset/actions/workflows/semantic-release.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://AgiBot-World.github.io/VideoDataset/_static/badges/coverage.json)](https://AgiBot-World.github.io/VideoDataset/reports/coverage)
