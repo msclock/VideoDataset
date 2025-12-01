@@ -37,6 +37,7 @@ dynamic = [
 dependencies = [
     "click>=8.2.0",
     "pydantic-settings>=2.7.1",
+    "torch",
 ]
 urls.documentation = "https://ai-platform.code.agibot.com/fast-context-queue"
 urls.issue = "https://code.agibot.com/ai-platform/fast-context-queue/-/issues"

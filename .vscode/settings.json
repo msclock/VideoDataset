@@ -94,5 +94,10 @@
     "sortJSONTypeReverse": false,
     "sortJSONValues": false,
     "sortJSONValuesReverse": false
-  }
+  },
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }
