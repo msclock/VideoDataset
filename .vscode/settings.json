@@ -105,6 +105,7 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "cmake.configureOnEdit": false,
+  "cmake.configureOnOpen": false,
   "cmake.options.statusBarVisibility": "icon",
   "cmake.useCMakePresets": "auto",
   "python-envs.defaultEnvManager": "ms-python.python:system",
