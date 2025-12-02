@@ -40,14 +40,25 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Deploy to GitHub Pages
-        if: >
-          github.event_name == 'release' && github.event.action == 'published' ||
-          github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+
+  pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    if: >
+      github.event_name == 'release' && github.event.action == 'published' ||
+      github.ref == 'refs/heads/main'
+    needs:
+      - ci
+    permissions:
+      id-token: write
+      pages: write
+
+    steps:
+      - id: deployment
+        name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
 
 
   build_wheels:
