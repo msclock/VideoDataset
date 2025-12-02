@@ -20,19 +20,34 @@ jobs:
   ci:
     runs-on: self-hosted
     if: github.repository == 'AgiBot-World/videodataset'
+    permissions:
+      contents: write
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - run: make dev-test,doc,lint
       - run: make pre-commit
       - run: make test
-      - run: make doc-build
+      - run: make doc
       - run: make build
+
       - name: Upload coverage report
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Deploy to GitHub Pages
+        if: >
+          github.event_name == 'release' && github.event.action == 'published' ||
+          github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
 
 
   build_wheels:

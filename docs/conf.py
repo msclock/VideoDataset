@@ -114,10 +114,6 @@ myst_url_schemes = {
     "vscode": None,
 }
 
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-}
-
 nitpick_ignore = [
     ("py:class", "_io.StringIO"),
     ("py:class", "_io.BytesIO"),
