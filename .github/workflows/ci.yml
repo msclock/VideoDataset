@@ -19,7 +19,7 @@ env:
 jobs:
   ci:
     runs-on: self-hosted
-    if: github.repository == 'AgiBot-World/videodataset'
+    if: github.repository == 'AgiBot-World/VideoDataset'
 
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +61,6 @@ jobs:
       - id: deployment
         name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
-
 
   build_wheels:
     uses: ./.github/workflows/reuseable_cibuildwheel.yml

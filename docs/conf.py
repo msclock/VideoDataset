@@ -63,7 +63,7 @@ exclude_patterns = [
 linkcheck_ignore = [
     "https://github.com",
     "https://docs.python.org",
-    "https://github.com/AgiBot-World/videodataset",
+    "https://github.com/AgiBot-World/VideoDataset",
     "https://AgiBot-World.github.io/VideoDataset",
 ]
 
@@ -71,7 +71,7 @@ linkcheck_ignore = [
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
 
 # -- Options for autodoc extension  ----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
