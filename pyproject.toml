@@ -1,9 +1,6 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools==80.9.0",
-    "setuptools-scm==8.3.1",
-]
+build-backend = "scikit_build_core.build"
+requires = [ "conan", "mypy", "scikit-build-core" ]
 
 [project]
 name = "fast-context-queue"
@@ -40,7 +37,6 @@ dependencies = [
 urls.documentation = "https://ai-platform.code.agibot.com/fast-context-queue"
 urls.issue = "https://code.agibot.com/ai-platform/fast-context-queue/-/issues"
 urls.repository = "https://code.agibot.com/ai-platform/fast-context-queue"
-scripts.fast-context-queue-cli = "fast_context_queue.cli:cli"
 
 [dependency-groups]
 test = [
@@ -64,6 +60,30 @@ lint = [
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
+
+[tool.scikit-build]
+minimum-version = "0.9"
+build-dir = "build/{wheel_tag}"
+cmake.verbose = false
+logging.level = "DEBUG"
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+wheel.packages = [ "src/fast_context_queue" ]
+sdist.include = [
+    "src/fast_context_queue/_queue_core.pyi",
+    "cmake",
+]
+
+[tool.scikit-build.cmake.define]
+BUILD_TESTING = "OFF"
+CMAKE_BUILD_TYPE = "Release"
+CONAN_INSTALL_ARGS = "--build=missing;-c tools.build:skip_test=true"
+
+[tool.cibuildwheel]
+build-verbosity = 1
+skip = [ "*win*" ]
+test-command = "pytest {project}/tests"
+test-extras = [ "test" ]
+test-skip = [ "*-win*", "*-macosx*", "*-manylinux*" ]
 
 [tool.ruff]
 src = [
