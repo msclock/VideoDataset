@@ -29,8 +29,7 @@ def rewrite(url):
 
 
 def pre_source(conanfile: ConanFile):
-    """
-    Rewrite the URL of the source before to execute the source() method.
+    """Rewrite the URL of the source before to execute the source() method.
 
     Reference: https://docs.conan.io/2/reference/extensions/hooks.html
     """

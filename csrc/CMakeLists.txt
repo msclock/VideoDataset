@@ -1,6 +1,8 @@
 set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
 
+find_package(Boost REQUIRED)
+
 execute_process(
   COMMAND ${Python_EXECUTABLE} -c
           "import site;print(';'.join(site.getsitepackages()))"
@@ -39,7 +41,7 @@ target_include_interface_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/git_version)
 
 target_link_libraries(
-  ${target_name_internal} PUBLIC pybind11::pybind11)
+  ${target_name_internal} PUBLIC pybind11::pybind11  boost::boost)
 
 pybind11_add_module(${target_name} MODULE)
 warn_target(${target_name})

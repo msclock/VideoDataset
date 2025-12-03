@@ -103,4 +103,5 @@
   "cmake.configureOnEdit": false,
   "cmake.configureOnOpen": false,
   "cmake.options.statusBarVisibility": "icon",
+  "editor.wordWrap": "on",
 }

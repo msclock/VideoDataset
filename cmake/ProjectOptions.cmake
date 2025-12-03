@@ -82,7 +82,7 @@ if(NOT MSVC)
       # read-only
       -Wl,-z,now # Mark relocation table entries resolved at load-time as
       # read-only. It impacts startup performance
-      "-fsanitize=undefined -fsanitize-minimal-runtime" # Enable minimal runtime
+      # "-fsanitize=undefined -fsanitize-minimal-runtime" # Enable minimal runtime
       # undefined behavior sanitizer
       -fno-delete-null-pointer-checks
       -fno-strict-overflow

@@ -10,6 +10,7 @@ class FastContextQueueConan(ConanFile):
 
     def requirements(self):
         self.requires("pybind11/2.13.6")
+        self.requires("boost/1.85.0")
         if not self.conf.get("tools.build:skip_test", False):
             self.requires("catch2/3.8.1")
 
