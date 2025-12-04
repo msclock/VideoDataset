@@ -51,9 +51,9 @@ sanitize_target(${target_name})
 target_link_libraries(${target_name} PRIVATE ${target_name_internal}
                                              pybind11::module)
 
+string(REPLACE "-" "_" MODULE_NAME ${CMAKE_PROJECT_NAME})
 find_program(_STUBGEN stubgen)
 if(_STUBGEN)
-  string(REPLACE "-" "_" MODULE_NAME ${CMAKE_PROJECT_NAME})
   add_custom_command(
     TARGET ${target_name}
     POST_BUILD
@@ -66,7 +66,7 @@ if(_STUBGEN)
     COMMENT "Generating .pyi stubs for _core")
 endif()
 
-install(TARGETS ${target_name} DESTINATION ${CMAKE_PROJECT_NAME})
+install(TARGETS ${target_name} DESTINATION ${MODULE_NAME})
 
 message(
   STATUS
@@ -83,7 +83,7 @@ install_dependency(
   "/usr/local"
   ${_site_dirs}
   DEPENDS_DESTINATION
-  ${CMAKE_PROJECT_NAME})
+  ${MODULE_NAME})
 
 if(BUILD_TESTING)
   message(STATUS "Enabling testing")

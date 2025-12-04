@@ -104,4 +104,5 @@
   "cmake.configureOnOpen": false,
   "cmake.options.statusBarVisibility": "icon",
   "editor.wordWrap": "on",
+  "debugpy.debugJustMyCode": false,
 }

@@ -6,10 +6,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pybind11/cast.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
 #include "_core.hpp"
 
 namespace py = pybind11;
@@ -24,7 +20,7 @@ PYBIND11_MODULE(_core, m) {
 
     py::class_<CircularBuffer>(m, "CircularBuffer", R"pydoc(A circular buffer for process communication.)pydoc")
         .def(py::init<size_t, size_t, std::string, bool, bool>(),
-             py::arg("max_byte_size") = 10'000'000,
+             py::arg("max_buffer_size") = 10'000'000,
              py::arg("max_size") = 1'000'000'000,
              py::arg("name") = "",
              py::arg("create") = true,
@@ -32,71 +28,65 @@ PYBIND11_MODULE(_core, m) {
              py::doc(R"(Create a circular buffer.
 
 Args:
-    max_byte_size (int): Maximum size of the buffer in bytes.
+    max_buffer_size (int): Maximum size of the buffer in bytes.
     max_size (int): Maximum number of elements in the buffer.
     name (str): shared memory name.
     create (bool): whether to create first.
     auto_unlink (bool): whether to unlink the shared memory when the buffer is destroyed.)"))
-        .def(
-            "queue_put",
-            [](CircularBuffer &self,
-               py::buffer msgs_data,
-               py::buffer msg_sizes,
-               size_t num_msgs,
-               int block,
-               float timeout) {
-                py::buffer_info msgs_data_info = msgs_data.request();
-                py::buffer_info msg_sizes_info = msg_sizes.request();
-                self.queue_put(static_cast<const void **>(msgs_data_info.ptr),
-                               static_cast<const size_t *>(msg_sizes_info.ptr),
-                               num_msgs,
-                               block,
-                               timeout);
+        .def("write",
+             &CircularBuffer::write,
+             py::arg("msgs"),
+             py::arg("block"),
+             py::arg("timeout"),
+             //  py::call_guard<py::gil_scoped_release>(),
+             py::doc(R"(Put messages into the buffer.
+
+Args:
+    msgs (list): a list of messages to put into the buffer.
+    block (bool): whether to block if the buffer is full.
+    timeout (float): timeout in seconds.)"))
+        .def("read",
+             &CircularBuffer::read,
+             py::arg("max_messages_to_get"),
+             py::arg("block"),
+             py::arg("timeout"),
+             //  py::call_guard<py::gil_scoped_release>(),
+             py::doc(R"(Get messages from the buffer.
+
+Args:
+    max_messages_to_get (int): maximum number of messages to get.
+    block (bool): whether to block if there are no messages in the buffer.
+    timeout (float): timeout in seconds.)"))
+        .def("get_queue_size", &CircularBuffer::get_queue_size, py::doc("Get the number of elements in the buffer."))
+        .def("get_data_size", &CircularBuffer::get_data_size, py::doc("Get the size of the buffer in bytes."))
+        .def("is_queue_full", &CircularBuffer::is_queue_full, py::doc("Check if the buffer is full."))
+        .def("get_name", &CircularBuffer::get_name, py::doc("Get the name of the buffer."))
+        .def("get_max_buffer_size",
+             &CircularBuffer::get_max_buffer_size,
+             py::doc("Get the maximum size of the buffer in bytes."))
+        .def("get_max_size",
+             &CircularBuffer::get_max_size,
+             py::doc("Get the maximum number of elements in the buffer."))
+        .def("get_auto_unlink", &CircularBuffer::get_auto_unlink, py::doc("Get the auto_unlink flag."))
+        .def(py::pickle(
+            [](const CircularBuffer& p) { // __getstate__
+                /* Return a tuple that fully encodes the state of the object */
+                return py::make_tuple(p.get_max_buffer_size(), p.get_max_size(), p.get_name(), p.get_auto_unlink());
             },
-            py::arg("msgs_data"),
-            py::arg("msg_sizes"),
-            py::arg("num_msgs"),
-            py::arg("block"),
-            py::arg("timeout"),
-            py::doc(R"(Put messages into the buffer.)"))
-        .def(
-            "queue_get",
-            [](CircularBuffer &self,
-               py::buffer msg_buffer,
-               size_t msg_buffer_size,
-               size_t max_messages_to_get,
-               size_t max_bytes_to_get,
-               py::buffer message_read,
-               py::buffer bytes_read,
-               py::buffer messages_size,
-               int block,
-               float timeout) {
-                return self.queue_get(static_cast<void *>(msg_buffer.request().ptr),
-                                      msg_buffer_size,
-                                      max_messages_to_get,
-                                      max_bytes_to_get,
-                                      static_cast<size_t *>(message_read.request().ptr),
-                                      static_cast<size_t *>(bytes_read.request().ptr),
-                                      static_cast<size_t *>(messages_size.request().ptr),
-                                      block,
-                                      timeout);
-            },
-            py::arg("msg_buffer"),
-            py::arg("msg_buffer_size"),
-            py::arg("max_messages_to_get"),
-            py::arg("max_bytes_to_get"),
-            py::arg("message_read"),
-            py::arg("bytes_read"),
-            py::arg("messages_size"),
-            py::arg("block"),
-            py::arg("timeout"),
-            py::doc(R"(Get messages from the buffer.)"))
-        .def("get_queue_size", &CircularBuffer::get_queue_size)
-        .def("get_data_size", &CircularBuffer::get_data_size)
-        .def("is_queue_full", &CircularBuffer::is_queue_full);
+            [](py::tuple& t) { // __setstate__
+                if (t.size() != 4)
+                    throw std::runtime_error("Invalid state!");
+
+                CircularBuffer p(t[0].cast<size_t>(),
+                                 t[1].cast<size_t>(),
+                                 t[2].cast<std::string>(),
+                                 false,
+                                 t[3].cast<bool>());
+
+                return p;
+            }));
 
     m.attr("Q_SUCCESS") = py::cast(Q_SUCCESS);
     m.attr("Q_EMPTY") = py::cast(Q_EMPTY);
     m.attr("Q_FULL") = py::cast(Q_FULL);
-    m.attr("Q_MSG_BUFFER_TOO_SMALL") = py::cast(Q_MSG_BUFFER_TOO_SMALL);
 }

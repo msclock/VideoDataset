@@ -1,6 +1,6 @@
 """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
 
-import io
+import cProfile
 import logging
 import pickle
 import queue
@@ -13,6 +13,9 @@ from time import sleep
 
 import torch
 import torch.multiprocessing as mp
+
+import fast_context_queue
+import fast_context_queue.queue as fq
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +37,11 @@ def write_tensor_worker(
     for _ in range(num_tensors):
         shared_tensor = torch.rand(1, 1280, 720)
         if serialize:
-            buf = io.BytesIO()
-            ForkingPickler(buf, pickle.HIGHEST_PROTOCOL).dump(shared_tensor.cpu())
-            tensor_bytes = buf.getvalue()
-            _writer_send(tensor_bytes)
+            _writer_send(
+                ForkingPickler.dumps(
+                    (True, shared_tensor), protocol=pickle.HIGHEST_PROTOCOL
+                ).tobytes()
+            )
         else:
             _writer_send(shared_tensor)
     while not exit_event.is_set():
@@ -56,8 +60,30 @@ def test_subprocess_queue() -> None:
     )
     sub_process.start()
     sleep(3)
-    for _ in range(num_tensors):
-        q.get()
+    with cProfile.Profile() as pr:
+        for _ in range(num_tensors):
+            q.get()
+        pr.print_stats(sort="tottime")
+    exit_event.set()
+    sub_process.join()
+
+
+def test_fast_queue() -> None:
+    """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
+    mp.set_start_method("spawn", force=True)
+    num_tensors = 2000
+    exit_event = mp.Event()
+    q: fq.Queue = fq.Queue()
+    sub_process = mp.Process(
+        target=write_tensor_worker,
+        args=(exit_event, q.put_nowait, num_tensors, False),
+    )
+    sub_process.start()
+    sleep(3)
+    with cProfile.Profile() as pr:
+        for _ in range(num_tensors):
+            q.get()
+        pr.print_stats(sort="tottime")
     exit_event.set()
     sub_process.join()
 
@@ -171,9 +197,28 @@ def test_dataloader_mp_queue() -> None:
     assert count == num_workers
 
 
+def test_dataloader_fast_queue() -> None:
+    """Profile the performance of the fast queue with DataLoader."""
+    num_workers = 1
+    num_tensors = 2000
+    tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
+    data_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(*tensors),
+        num_workers=num_workers,
+        multiprocessing_context=fast_context_queue.get_context("spawn"),
+    )
+
+    data_loader_iter = iter(data_loader)
+    count = 0
+    for _ in next(data_loader_iter):
+        count += 1
+
+    assert count == num_tensors
+
+
 def test_dataloader_torch_queue() -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
-    num_workers = 4
+    num_workers = 1
     num_tensors = 2000
     tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(

@@ -167,4 +167,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# CMake build files
 !cmake/build
+
+# _decoder.pyi
+_core.pyi
