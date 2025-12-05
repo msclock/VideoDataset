@@ -30,7 +30,7 @@ class Queue:
 
     def __init__(
         self,
-        max_buffer_size: int = DEFAULT_CIRCULAR_BUFFER_SIZE * 20,
+        max_buffer_size: int = DEFAULT_CIRCULAR_BUFFER_SIZE,
         maxsize: int = int(1e9),
         loads: Callable[[bytes], Any] | None = None,
         dumps: Callable[[Any], bytes] | None = None,
@@ -45,7 +45,7 @@ class Queue:
         """
         self.max_buffer_size = max_buffer_size
         self.maxsize = maxsize
-        self.buffer = CircularBuffer(max_buffer_size, maxsize)
+        self.buffer = CircularBuffer(max_buffer_size, maxsize, auto_unlink=True)
 
         if loads is not None:
             self.loads = loads  # type: ignore[assignment, method-assign]

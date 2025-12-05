@@ -125,46 +125,45 @@ public:
 
         constexpr size_t queue_size = sizeof(CircularBufferState);
 
-        try {
-            state_mem_ =
-                std::make_shared<bip::shared_memory_object>(bip::open_or_create, state_name.c_str(), bip::read_write);
-            state_mem_->truncate(queue_size);
-            state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
-            state_ = static_cast<CircularBufferState *>(state_region_.get_address());
-            new (state_) CircularBufferState(max_buffer_size, maxsize);
-        }
-        catch (const bip::interprocess_exception &ex) {
-            state_mem_ =
-                std::make_shared<bip::shared_memory_object>(bip::open_only, state_name.c_str(), bip::read_write);
-            state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
-            state_ = static_cast<CircularBufferState *>(state_region_.get_address());
-            new (state_) CircularBufferState(max_buffer_size, maxsize);
-        }
+        // try {
+        state_mem_ =
+            std::make_shared<bip::shared_memory_object>(bip::open_or_create, state_name.c_str(), bip::read_write);
+        state_mem_->truncate(queue_size);
+        state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
+        state_ = static_cast<CircularBufferState *>(state_region_.get_address());
+        new (state_) CircularBufferState(max_buffer_size, maxsize);
+        // }
+        // catch (const bip::interprocess_exception &ex) {
+        //     state_mem_ =
+        //         std::make_shared<bip::shared_memory_object>(bip::open_only, state_name.c_str(), bip::read_write);
+        //     state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
+        //     state_ = static_cast<CircularBufferState *>(state_region_.get_address());
+        //     new (state_) CircularBufferState(max_buffer_size, maxsize);
+        // }
 
-        try {
-            buf_mem_ =
-                std::make_shared<bip::shared_memory_object>(bip::open_or_create, buf_name.c_str(), bip::read_write);
-            buf_mem_->truncate(static_cast<boost::interprocess::offset_t>(max_buffer_size));
-            buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
-            buf_ = static_cast<uint8_t *>(buf_region_.get_address());
-            std::fill_n(buf_, max_buffer_size, 0);
-        }
-        catch (const bip::interprocess_exception &ex) {
-            buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_only, buf_name.c_str(), bip::read_write);
-            buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
-            buf_ = static_cast<uint8_t *>(buf_region_.get_address());
-        }
+        // try {
+        buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_or_create, buf_name.c_str(), bip::read_write);
+        buf_mem_->truncate(static_cast<boost::interprocess::offset_t>(max_buffer_size));
+        buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
+        buf_ = static_cast<uint8_t *>(buf_region_.get_address());
+        // std::fill_n(buf_, max_buffer_size, 0);
+        // }
+        // catch (const bip::interprocess_exception &ex) {
+        //     buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_only, buf_name.c_str(),
+        //     bip::read_write); buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write); buf_ =
+        //     static_cast<uint8_t *>(buf_region_.get_address());
+        // }
     }
 
     ~CircularBuffer() {
         if (auto_unlink_) {
-            if (state_mem_) {
-                state_mem_->remove((name_ + "S_").c_str());
-                state_mem_ = nullptr;
-            }
             if (buf_mem_) {
                 buf_mem_->remove((name_ + "B_").c_str());
                 buf_mem_ = nullptr;
+            }
+            if (state_mem_) {
+                state_mem_->remove((name_ + "S_").c_str());
+                state_mem_ = nullptr;
             }
         }
     }
@@ -174,9 +173,9 @@ public:
 
     int write(const py::bytes &msg, const int block = true, float timeout = 0.2f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
-        fprintf(stderr, "%s", "write\n");
         const std::string_view msg_view = msg.cast<std::string_view>();
-        const auto msg_size = sizeof(ssize_t) + msg_view.size() * sizeof(uint8_t);
+        fprintf(stderr, "write: %d\n", msg_view.size());
+        const auto msg_size = sizeof(size_t) + msg_view.size() * sizeof(uint8_t);
 
         auto wait_remaining = float_seconds_to_chrono(timeout);
         while (!state_->is_fit(msg_size, 1)) {
@@ -191,7 +190,7 @@ public:
         }
 
         auto msg_len = msg_view.size();
-        state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(&msg_len), sizeof(ssize_t));
+        state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(&msg_len), sizeof(size_t));
         state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(msg_view.data()), msg_view.size());
         ++state_->num_elem;
 
@@ -216,15 +215,15 @@ public:
         }
 
         size_t msg_size;
-        state_->buffer_read(this->buf_, reinterpret_cast<uint8_t *>(&msg_size), sizeof(msg_size), false);
+        state_->buffer_read(this->buf_, reinterpret_cast<uint8_t *>(&msg_size), sizeof(size_t), false);
 
-        LOG_ASSERT(state_->size >= sizeof(msg_size) + msg_size, "Queue size is less than message size!");
+        LOG_ASSERT(state_->size >= sizeof(size_t) + msg_size, "Queue size is less than message size!");
 
-        const auto read_num_bytes = sizeof(msg_size) + msg_size;
+        const auto read_num_bytes = sizeof(size_t) + msg_size;
         std::vector<uint8_t> msg_buffer(msg_size);
         state_->buffer_read(this->buf_, msg_buffer.data(), read_num_bytes, true);
-        auto msg = py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(msg_size)), msg_size);
-
+        auto msg = py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(size_t)), msg_size);
+        fprintf(stderr, "read: %d\n", msg_size);
         --state_->num_elem;
 
         if (state_->not_full_n_waiters > 0)
