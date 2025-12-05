@@ -117,7 +117,6 @@ public:
     explicit CircularBuffer(size_t max_buffer_size = 10'000'000,
                             size_t maxsize = 1'000'000'000,
                             std::string name = "",
-                            bool create = true,
                             bool auto_unlink = true)
         : name_(name.empty() ? _safe_base("CircularBuffer") : std::move(name)),
           auto_unlink_(auto_unlink) {
@@ -126,47 +125,31 @@ public:
 
         constexpr size_t queue_size = sizeof(CircularBufferState);
 
-        if (create) {
-            try {
-                state_mem_ =
-                    std::make_shared<bip::shared_memory_object>(bip::create_only, state_name.c_str(), bip::read_write);
-                state_mem_->truncate(queue_size);
-                state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
-                state_ = static_cast<CircularBufferState *>(state_region_.get_address());
-                new (state_) CircularBufferState(max_buffer_size, maxsize);
-            }
-            catch (const bip::interprocess_exception &ex) {
-                state_mem_ =
-                    std::make_shared<bip::shared_memory_object>(bip::open_only, state_name.c_str(), bip::read_write);
-                state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
-                state_ = static_cast<CircularBufferState *>(state_region_.get_address());
-                new (state_) CircularBufferState(max_buffer_size, maxsize);
-            }
+        try {
+            state_mem_ =
+                std::make_shared<bip::shared_memory_object>(bip::open_or_create, state_name.c_str(), bip::read_write);
+            state_mem_->truncate(queue_size);
+            state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
+            state_ = static_cast<CircularBufferState *>(state_region_.get_address());
+            new (state_) CircularBufferState(max_buffer_size, maxsize);
         }
-        else {
+        catch (const bip::interprocess_exception &ex) {
             state_mem_ =
                 std::make_shared<bip::shared_memory_object>(bip::open_only, state_name.c_str(), bip::read_write);
             state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
             state_ = static_cast<CircularBufferState *>(state_region_.get_address());
+            new (state_) CircularBufferState(max_buffer_size, maxsize);
         }
 
-        if (create) {
-            try {
-                buf_mem_ =
-                    std::make_shared<bip::shared_memory_object>(bip::create_only, buf_name.c_str(), bip::read_write);
-                buf_mem_->truncate(static_cast<boost::interprocess::offset_t>(max_buffer_size));
-                buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
-                buf_ = static_cast<uint8_t *>(buf_region_.get_address());
-                std::fill_n(buf_, max_buffer_size, 0);
-            }
-            catch (const bip::interprocess_exception &ex) {
-                buf_mem_ =
-                    std::make_shared<bip::shared_memory_object>(bip::open_only, buf_name.c_str(), bip::read_write);
-                buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
-                buf_ = static_cast<uint8_t *>(buf_region_.get_address());
-            }
+        try {
+            buf_mem_ =
+                std::make_shared<bip::shared_memory_object>(bip::open_or_create, buf_name.c_str(), bip::read_write);
+            buf_mem_->truncate(static_cast<boost::interprocess::offset_t>(max_buffer_size));
+            buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
+            buf_ = static_cast<uint8_t *>(buf_region_.get_address());
+            std::fill_n(buf_, max_buffer_size, 0);
         }
-        else {
+        catch (const bip::interprocess_exception &ex) {
             buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_only, buf_name.c_str(), bip::read_write);
             buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
             buf_ = static_cast<uint8_t *>(buf_region_.get_address());
@@ -177,29 +160,26 @@ public:
         if (auto_unlink_) {
             if (state_mem_) {
                 state_mem_->remove((name_ + "S_").c_str());
+                state_mem_ = nullptr;
             }
             if (buf_mem_) {
                 buf_mem_->remove((name_ + "B_").c_str());
+                buf_mem_ = nullptr;
             }
         }
     }
 
     CircularBuffer(const CircularBuffer &o)
-        : CircularBuffer(o.get_max_buffer_size(), o.get_max_size(), o.name_, false, o.auto_unlink_) {}
+        : CircularBuffer(o.get_max_buffer_size(), o.get_max_size(), o.name_, o.auto_unlink_) {}
 
-    int write(py::list &msgs, const int block, const float timeout) {
+    int write(const py::bytes &msg, const int block = true, float timeout = 0.2f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
-
-        auto msg_num = msgs.size();
-        auto total_size = static_cast<size_t>(msg_num) * sizeof(ssize_t);
-        std::vector<std::string_view> msg_views;
-        for (size_t i = 0; i < msg_num; ++i) {
-            msg_views.push_back(msgs[i].cast<std::string_view>());
-            total_size += msg_views.back().size() * sizeof(uint8_t);
-        }
+        fprintf(stderr, "%s", "write\n");
+        const std::string_view msg_view = msg.cast<std::string_view>();
+        const auto msg_size = sizeof(ssize_t) + msg_view.size() * sizeof(uint8_t);
 
         auto wait_remaining = float_seconds_to_chrono(timeout);
-        while (!state_->is_fit(total_size, static_cast<size_t>(msg_num))) {
+        while (!state_->is_fit(msg_size, 1)) {
             if (!block || wait_remaining.count() <= 0)
                 return Q_FULL;
 
@@ -210,14 +190,10 @@ public:
             wait_remaining = wait(wait_remaining, &state_->not_full, &lock, &state_->not_full_n_waiters);
         }
 
-        for (size_t i = 0; i < static_cast<size_t>(msgs.size()); ++i) {
-            auto msg_len = msg_views[i].size();
-            state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(&msg_len), sizeof(ssize_t));
-            state_->buffer_write(this->buf_,
-                                 reinterpret_cast<const uint8_t *>(msg_views[i].data()),
-                                 msg_views[i].size());
-            ++state_->num_elem;
-        }
+        auto msg_len = msg_view.size();
+        state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(&msg_len), sizeof(ssize_t));
+        state_->buffer_write(this->buf_, reinterpret_cast<const uint8_t *>(msg_view.data()), msg_view.size());
+        ++state_->num_elem;
 
         if (state_->not_empty_n_waiters > 0)
             state_->not_empty.notify_one();
@@ -227,48 +203,36 @@ public:
         return Q_SUCCESS;
     }
 
-    py::tuple read(size_t max_messages_to_get, int block, float timeout) {
-        size_t messages_read = 0;
-        size_t bytes_read = 0;
+    py::tuple read(bool block = true, float timeout = 2.0f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
-
+        fprintf(stderr, "%s", "read\n");
         auto wait_remaining = float_seconds_to_chrono(timeout);
         int wait_count = 0;
         while (state_->size <= 0) {
             if (!block || wait_remaining.count() <= 0)
                 return py::make_tuple(py::none(), Q_EMPTY);
             wait_count++;
-            // fprintf(stderr, "%s:%d %s %d\n", __FILE__, __LINE__, "read wait_remaining: ", wait_count);
             wait_remaining = wait(wait_remaining, &state_->not_empty, &lock, &state_->not_empty_n_waiters);
         }
 
-        py::list msgs;
-        while (messages_read < max_messages_to_get && bytes_read < state_->max_buffer_size) {
-            size_t msg_size;
-            state_->buffer_read(this->buf_, reinterpret_cast<uint8_t *>(&msg_size), sizeof(msg_size), false);
+        size_t msg_size;
+        state_->buffer_read(this->buf_, reinterpret_cast<uint8_t *>(&msg_size), sizeof(msg_size), false);
 
-            LOG_ASSERT(state_->size >= sizeof(msg_size) + msg_size, "Queue size is less than message size!");
+        LOG_ASSERT(state_->size >= sizeof(msg_size) + msg_size, "Queue size is less than message size!");
 
-            const auto read_num_bytes = sizeof(msg_size) + msg_size;
-            std::vector<uint8_t> msg_buffer(msg_size);
-            state_->buffer_read(this->buf_, msg_buffer.data(), read_num_bytes, true);
-            msgs.append(py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(msg_size)), msg_size));
+        const auto read_num_bytes = sizeof(msg_size) + msg_size;
+        std::vector<uint8_t> msg_buffer(msg_size);
+        state_->buffer_read(this->buf_, msg_buffer.data(), read_num_bytes, true);
+        auto msg = py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(msg_size)), msg_size);
 
-            bytes_read += read_num_bytes;
-            messages_read += 1;
-            --state_->num_elem;
+        --state_->num_elem;
 
-            if (state_->size <= 0) {
-                break;
-            }
-        }
-
-        if (messages_read > 0 && state_->not_full_n_waiters > 0)
+        if (state_->not_full_n_waiters > 0)
             state_->not_full.notify_one();
         else if (state_->size > 0 && state_->not_empty_n_waiters > 0)
             state_->not_empty.notify_one();
 
-        return py::make_tuple(msgs, Q_SUCCESS);
+        return py::make_tuple(msg, Q_SUCCESS);
     }
 
     size_t get_queue_size() { return state_->num_elem; }

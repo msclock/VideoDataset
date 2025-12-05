@@ -61,25 +61,20 @@ class Queue:
 
     def loads(self, msg_bytes: bytes) -> Any:
         """Loads."""
-        return _ForkingPickler.loads(msg_bytes)
+        return pickle.loads(msg_bytes)
 
     def dumps(self, obj: Any) -> bytes:
         """Dumps."""
         return _ForkingPickler.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL).tobytes()
 
-    def put_many(
+    def put(
         self,
-        xs: list[Any] | tuple[Any],
+        x: Any,
         block: bool = True,
         timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
-        """Put a list of objects into the queue."""
-        if not isinstance(xs, list | tuple):
-            self._error(f"put_many() expects a list or tuple, got {type(xs)}")
-
-        xs = [self.dumps(ele) for ele in xs]
-        status = self.buffer.write(xs, block, timeout)
-
+        """Put an objects into the queue."""
+        status = self.buffer.write(self.dumps(x), block, timeout)
         if status == Q_SUCCESS:
             pass
         elif status == Q_FULL:
@@ -87,37 +82,27 @@ class Queue:
         else:
             raise Exception(f"Unexpected queue error {status}")
 
-    def put(self, x: Any, block: bool = True, timeout: float = DEFAULT_TIMEOUT) -> None:
-        """Put an object into the queue."""
-        return self.put_many([x], block, timeout)
-
     def put_nowait(self, x: Any) -> None:
         """Put an object into the queue without blocking."""
         return self.put(x, block=False)
 
-    def get_many(
+    def get(
         self,
         block: bool = True,
         timeout: float = DEFAULT_TIMEOUT,
-        max_messages_to_get: int = int(1e9),
-    ) -> list[Any]:
-        """Get a list of objects from the queue."""
-        messages, status = self.buffer.read(
-            max_messages_to_get,
+    ) -> Any:
+        """Get an object from the queue."""
+        msg, status = self.buffer.read(
             block,
             timeout,
         )
 
         if status == Q_SUCCESS:
-            return [self.loads(msg) for msg in messages]
+            return self.loads(msg)
         elif status == Q_EMPTY:
             raise Empty()
         else:
             raise Exception(f"Unexpected queue error {status}")
-
-    def get(self, block: bool = True, timeout: float = DEFAULT_TIMEOUT) -> Any:
-        """Get a object from the queue."""
-        return self.get_many(block=block, timeout=timeout, max_messages_to_get=1)[0]
 
     def get_nowait(self) -> Any:
         """Get a object from the queue without blocking."""

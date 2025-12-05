@@ -194,7 +194,7 @@ def test_dataloader_mp_queue() -> None:
     for _ in next(data_loader_iter):
         count += 1
 
-    assert count == num_workers
+    assert count == num_tensors
 
 
 def test_dataloader_fast_queue() -> None:

@@ -1,3 +1,4 @@
+#include <pybind11/pytypes.h>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -19,11 +20,10 @@ PYBIND11_MODULE(_core, m) {
     )pbdoc";
 
     py::class_<CircularBuffer>(m, "CircularBuffer", R"pydoc(A circular buffer for process communication.)pydoc")
-        .def(py::init<size_t, size_t, std::string, bool, bool>(),
+        .def(py::init<size_t, size_t, std::string, bool>(),
              py::arg("max_buffer_size") = 10'000'000,
              py::arg("max_size") = 1'000'000'000,
              py::arg("name") = "",
-             py::arg("create") = true,
              py::arg("auto_unlink") = true,
              py::doc(R"(Create a circular buffer.
 
@@ -31,32 +31,27 @@ Args:
     max_buffer_size (int): Maximum size of the buffer in bytes.
     max_size (int): Maximum number of elements in the buffer.
     name (str): shared memory name.
-    create (bool): whether to create first.
     auto_unlink (bool): whether to unlink the shared memory when the buffer is destroyed.)"))
         .def("write",
              &CircularBuffer::write,
-             py::arg("msgs"),
-             py::arg("block"),
-             py::arg("timeout"),
-             //  py::call_guard<py::gil_scoped_release>(),
+             py::arg("msg"),
+             py::arg("block") = py::bool_(true),
+             py::arg("timeout") = 0.2f,
              py::doc(R"(Put messages into the buffer.
 
 Args:
-    msgs (list): a list of messages to put into the buffer.
+    msgs (bytes): a message to put into the buffer.
     block (bool): whether to block if the buffer is full.
-    timeout (float): timeout in seconds.)"))
+    timeout (float): timeout in seconds. Default to 0.2 seconds.)"))
         .def("read",
              &CircularBuffer::read,
-             py::arg("max_messages_to_get"),
-             py::arg("block"),
-             py::arg("timeout"),
-             //  py::call_guard<py::gil_scoped_release>(),
+             py::arg("block") = py::bool_(true),
+             py::arg("timeout") = 2.0f,
              py::doc(R"(Get messages from the buffer.
 
 Args:
-    max_messages_to_get (int): maximum number of messages to get.
     block (bool): whether to block if there are no messages in the buffer.
-    timeout (float): timeout in seconds.)"))
+    timeout (float): timeout in seconds. Default to 2.0 seconds.)"))
         .def("get_queue_size", &CircularBuffer::get_queue_size, py::doc("Get the number of elements in the buffer."))
         .def("get_data_size", &CircularBuffer::get_data_size, py::doc("Get the size of the buffer in bytes."))
         .def("is_queue_full", &CircularBuffer::is_queue_full, py::doc("Check if the buffer is full."))
@@ -77,13 +72,10 @@ Args:
                 if (t.size() != 4)
                     throw std::runtime_error("Invalid state!");
 
-                CircularBuffer p(t[0].cast<size_t>(),
-                                 t[1].cast<size_t>(),
-                                 t[2].cast<std::string>(),
-                                 false,
-                                 t[3].cast<bool>());
-
-                return p;
+                return CircularBuffer(t[0].cast<size_t>(),
+                                      t[1].cast<size_t>(),
+                                      t[2].cast<std::string>(),
+                                      t[3].cast<bool>());
             }));
 
     m.attr("Q_SUCCESS") = py::cast(Q_SUCCESS);

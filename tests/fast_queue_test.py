@@ -2,11 +2,12 @@
 
 import logging
 
+import numpy as np
+import torch
+
 import fast_context_queue.queue as fq
 
 logger = logging.getLogger(__name__)
-import numpy as np
-import torch
 
 
 def test_fast_queue_tensors() -> None:
