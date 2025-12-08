@@ -14,7 +14,6 @@ from time import sleep
 import torch
 import torch.multiprocessing as mp
 
-import fast_context_queue
 import fast_context_queue.queue as fq
 
 logger = logging.getLogger(__name__)
@@ -199,13 +198,15 @@ def test_dataloader_mp_queue() -> None:
 
 def test_dataloader_fast_queue() -> None:
     """Profile the performance of the fast queue with DataLoader."""
+    from fast_context_queue.context import get_context
+
     num_workers = 1
     num_tensors = 2000
     tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*tensors),
         num_workers=num_workers,
-        multiprocessing_context=fast_context_queue.get_context("spawn"),
+        multiprocessing_context=get_context("spawn"),
     )
 
     data_loader_iter = iter(data_loader)

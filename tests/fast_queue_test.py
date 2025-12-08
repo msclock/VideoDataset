@@ -20,16 +20,26 @@ def test_fast_queue_tensors() -> None:
 
 def test_fast_queue_objects() -> None:
     """Test fast queue with objects."""
-    objs = [
+    objs: list = [
         None,
         1,
         "2",
         b"3",
-        # [4, 5],
-        # {"6": 7},
-        # tuple([8, 9]),
-        # set([10, 11]),
-        # {},
+        {},
+        [4, 5],
+        {"6": 7},
+        (8, 9),
+        set([10, 11]),
+        [[12, 13], [14, 15]],
+        {16: [17, 18]},
+        {19: {20: 21}},
+        {22: (23, 24)},
+        {25: [26, 27]},
+        {28: {29: (30, 31)}},
+        {32: [33, 34]},
+        {35: {36: [37, 38]}},
+        {39: {40: {41: [42, 43]}}},
+        {44: {45: {46: {47: [48, 49]}}}},
     ]
     q = fq.Queue()
     for obj in objs:
@@ -48,7 +58,7 @@ def test_fast_queue_numpy() -> None:
 def test_fast_queue_tuple() -> None:
     """Test fast queue with tuple."""
     q = fq.Queue()
-    t2 = (1, 2, 3)
+    t2 = (1, 2)
     q.put(t2)
     assert q.get() == t2
 

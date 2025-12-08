@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <sstream>
 #include <thread>
@@ -31,6 +32,20 @@ TEST_CASE("CircularBuffer Test - Write and Read", "[circular_buffer]") {
     auto empty_status = buffer.read();
     REQUIRE(empty_status[1].cast<int>() == Q_EMPTY);
     REQUIRE(empty_status[0].is_none());
+}
+
+TEST_CASE("CircularBuffer Test - Write and Read py::tuple", "[circular_buffer]") {
+    pybind11::scoped_interpreter guard{};
+    CircularBuffer buffer;
+    std::vector<uint8_t> data =
+        {0x80, 0x05, 0x95, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4b, 0x01, 0x4b, 0x02, 0x86, 0x94, 0x2e};
+    auto mgs = py::bytes(reinterpret_cast<const char*>(data.data()), data.size());
+    REQUIRE(buffer.write(mgs) == Q_SUCCESS);
+
+    auto results = buffer.read();
+    REQUIRE(results[1].cast<int>() == Q_SUCCESS);
+    auto placeholder = results[0].cast<py::tuple>();
+    REQUIRE(py::len(placeholder) == 18);
 }
 
 TEST_CASE("CircularBuffer Test - Queue Full", "[circular_buffer]") {
@@ -83,20 +98,26 @@ TEST_CASE("CircularBuffer Test - Multi Process", "[circular_buffer]") {
     if (pid == 0) {
         // Child process
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for parent process to initialize
+        fprintf(stderr, "before write in parent %s\n", std::to_string(buffer.get_data_size()).c_str());
         REQUIRE(buffer.write(py::bytes(msg1), true, 1) == Q_SUCCESS);
+        fprintf(stderr, "after write in child %s\n", std::to_string(buffer.get_data_size()).c_str());
     }
     else if (pid > 0) {
         // Parent process
         // Wait for child process to end
         waitpid(pid, nullptr, 0);
 
+        fprintf(stderr, "before read in parent %s\n", std::to_string(buffer.get_data_size()).c_str());
         auto read_msg = buffer.read();
         REQUIRE(read_msg[1].cast<int>() == Q_SUCCESS);
         REQUIRE(read_msg[0].cast<std::string>() == "ChildMessage");
+        fprintf(stderr, "after read in parent %s\n", std::to_string(buffer.get_data_size()).c_str());
     }
     else {
         // Fork failed
         REQUIRE(false);
     }
+    fprintf(stderr, "final size %s\n", std::to_string(buffer.get_data_size()).c_str());
+    REQUIRE(buffer.get_data_size() == 0);
 }
 #endif

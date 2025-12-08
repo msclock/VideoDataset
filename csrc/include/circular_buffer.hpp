@@ -157,13 +157,13 @@ public:
 
     ~CircularBuffer() {
         if (auto_unlink_) {
-            if (buf_mem_) {
-                buf_mem_->remove((name_ + "B_").c_str());
-                buf_mem_ = nullptr;
-            }
             if (state_mem_) {
                 state_mem_->remove((name_ + "S_").c_str());
                 state_mem_ = nullptr;
+            }
+            if (buf_mem_) {
+                buf_mem_->remove((name_ + "B_").c_str());
+                buf_mem_ = nullptr;
             }
         }
     }
@@ -202,7 +202,7 @@ public:
         return Q_SUCCESS;
     }
 
-    py::tuple read(bool block = true, float timeout = 2.0f) {
+    py::typing::Tuple<py::bytes, int> read(bool block = true, float timeout = 2.0f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
         fprintf(stderr, "%s", "read\n");
         auto wait_remaining = float_seconds_to_chrono(timeout);
@@ -220,7 +220,7 @@ public:
         LOG_ASSERT(state_->size >= sizeof(size_t) + msg_size, "Queue size is less than message size!");
 
         const auto read_num_bytes = sizeof(size_t) + msg_size;
-        std::vector<uint8_t> msg_buffer(msg_size);
+        std::vector<uint8_t> msg_buffer(msg_size + 10);
         state_->buffer_read(this->buf_, msg_buffer.data(), read_num_bytes, true);
         auto msg = py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(size_t)), msg_size);
         fprintf(stderr, "read: %d\n", msg_size);

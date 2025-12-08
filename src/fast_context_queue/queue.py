@@ -92,13 +92,13 @@ class Queue:
         timeout: float = DEFAULT_TIMEOUT,
     ) -> Any:
         """Get an object from the queue."""
-        msg, status = self.buffer.read(
+        msg_bytes, status = self.buffer.read(
             block,
             timeout,
         )
 
         if status == Q_SUCCESS:
-            return self.loads(msg)
+            return self.loads(msg_bytes)
         elif status == Q_EMPTY:
             raise Empty()
         else:
