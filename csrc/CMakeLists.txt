@@ -38,10 +38,9 @@ target_sources(${target_name_internal} PRIVATE ${${target_name_internal}_srcs}
 
 target_include_interface_directories(
   ${target_name_internal} ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_BINARY_DIR}/git_version)
+  ${CMAKE_CURRENT_BINARY_DIR}/git_version ${Boost_INCLUDE_DIR})
 
-target_link_libraries(
-  ${target_name_internal} PUBLIC pybind11::pybind11  boost::boost)
+target_link_libraries(${target_name_internal} PUBLIC pybind11::pybind11)
 
 pybind11_add_module(${target_name} MODULE)
 warn_target(${target_name})
@@ -60,8 +59,8 @@ if(_STUBGEN)
     COMMAND
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=$<TARGET_FILE_DIR:${target_name}>:$ENV{PYTHONPATH}"
-      ${_STUBGEN} -o "${CMAKE_SOURCE_DIR}/src/${MODULE_NAME}" --include-docstrings
-      -m ${target_name}
+      ${_STUBGEN} -o "${CMAKE_SOURCE_DIR}/src/${MODULE_NAME}"
+      --include-docstrings -m ${target_name}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating .pyi stubs for _core")
 endif()
