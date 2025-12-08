@@ -61,7 +61,7 @@ class Queue:
 
     def loads(self, msg_bytes: bytes) -> Any:
         """Loads."""
-        return pickle.loads(msg_bytes)
+        return _ForkingPickler.loads(msg_bytes)
 
     def dumps(self, obj: Any) -> bytes:
         """Dumps."""
