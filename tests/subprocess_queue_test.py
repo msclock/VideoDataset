@@ -13,6 +13,7 @@ from time import sleep
 
 import torch
 import torch.multiprocessing as mp
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 import fast_context_queue.queue as fq
 
@@ -179,9 +180,9 @@ def test_subprocess_queue_process_pool() -> None:
 
 def test_dataloader_mp_queue() -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
-    num_workers = 4
-    num_tensors = 2000
-    tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
+    num_workers = 1
+    num_tensors = 100
+    tensors = [torch.rand(10, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*tensors),
         num_workers=num_workers,
@@ -192,7 +193,6 @@ def test_dataloader_mp_queue() -> None:
     count = 0
     for _ in next(data_loader_iter):
         count += 1
-
     assert count == num_tensors
 
 
@@ -201,8 +201,8 @@ def test_dataloader_fast_queue() -> None:
     from fast_context_queue.context import get_context
 
     num_workers = 1
-    num_tensors = 2000
-    tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
+    num_tensors = 100
+    tensors = [torch.rand(10, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*tensors),
         num_workers=num_workers,
@@ -220,8 +220,8 @@ def test_dataloader_fast_queue() -> None:
 def test_dataloader_torch_queue() -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
     num_workers = 1
-    num_tensors = 2000
-    tensors = [torch.rand(1, 1280, 720) for _ in range(num_tensors)]
+    num_tensors = 100
+    tensors = [torch.rand(10, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*tensors),
         num_workers=num_workers,
@@ -233,3 +233,23 @@ def test_dataloader_torch_queue() -> None:
     for _ in next(data_loader_iter):
         count += 1
     assert count == num_tensors
+
+
+def test_lerobot_dataloader_torch_queue() -> None:
+    """Profile the performance of the subprocess queue with DataLoader."""
+    num_workers = 1
+    dataset = LeRobotDataset(
+        repo_id=None,
+        root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
+    )
+    data_loader = torch.utils.data.DataLoader(
+        dataset,
+        num_workers=num_workers,
+        multiprocessing_context=torch.multiprocessing.get_context("spawn"),
+    )
+
+    data_loader_iter = iter(data_loader)
+    count = 0
+    for _ in next(data_loader_iter):
+        count += 1
+    logger.info(f"count: {count}")
