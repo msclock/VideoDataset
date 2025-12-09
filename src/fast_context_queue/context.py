@@ -8,4 +8,4 @@ from fast_context_queue import queue
 __all__ = multiprocessing.__all__
 
 SpawnContext = get_context("spawn")
-SpawnContext.Queue = queue.Queue
+SpawnContext.Queue = queue.Queue  # type: ignore[assignment, method-assign]
