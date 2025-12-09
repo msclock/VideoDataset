@@ -174,7 +174,6 @@ public:
     int write(const py::bytes &msg, const int block = true, float timeout = 0.2f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
         const std::string_view msg_view = msg.cast<std::string_view>();
-        fprintf(stderr, "write: %d\n", msg_view.size());
         const auto msg_size = sizeof(size_t) + msg_view.size() * sizeof(uint8_t);
 
         auto wait_remaining = float_seconds_to_chrono(timeout);
@@ -204,7 +203,6 @@ public:
 
     py::typing::Tuple<py::bytes, int> read(bool block = true, float timeout = 2.0f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
-        fprintf(stderr, "%s", "read\n");
         auto wait_remaining = float_seconds_to_chrono(timeout);
         int wait_count = 0;
         while (state_->size <= 0) {
@@ -223,7 +221,6 @@ public:
         std::vector<uint8_t> msg_buffer(msg_size + 10);
         state_->buffer_read(this->buf_, msg_buffer.data(), read_num_bytes, true);
         auto msg = py::bytes(reinterpret_cast<const char *>(msg_buffer.data() + sizeof(size_t)), msg_size);
-        fprintf(stderr, "read: %d\n", msg_size);
         --state_->num_elem;
 
         if (state_->not_full_n_waiters > 0)
