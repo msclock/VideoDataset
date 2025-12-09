@@ -2,6 +2,7 @@
 
 import cProfile
 import logging
+import multiprocessing
 import pickle
 import queue
 from collections.abc import Callable
@@ -73,7 +74,7 @@ def test_fast_queue() -> None:
     mp.set_start_method("spawn", force=True)
     num_tensors = 2000
     exit_event = mp.Event()
-    q: fq.Queue = fq.Queue()
+    q: fq.Queue = fq.Queue(ctx=multiprocessing.get_context("spawn"))
     sub_process = mp.Process(
         target=write_tensor_worker,
         args=(exit_event, q.put_nowait, num_tensors, False),
