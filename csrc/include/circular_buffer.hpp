@@ -1,12 +1,12 @@
-#include <array>
+#pragma once
+
 #include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <mutex>
-#include <new>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
