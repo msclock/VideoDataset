@@ -16,7 +16,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
-#include <sys/types.h>
 
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
@@ -39,19 +38,15 @@ constexpr int Q_SUCCESS = 0, Q_EMPTY = -1, Q_FULL = -2;
     }
 
 struct CircularBufferState {
-    explicit CircularBufferState(size_t max_buffer_size, size_t maxsize)
+    explicit CircularBufferState(size_t max_buffer_size, size_t max_size)
         : max_buffer_size(max_buffer_size),
-          maxsize(maxsize) {}
+          max_size(max_size) {}
 
     ~CircularBufferState() = default;
 
-    size_t get_max_buffer_size() const { return max_buffer_size; }
-
-    size_t get_max_size() const { return maxsize; }
-
     bool is_fit(size_t data_size, size_t additional_size) const {
         const bool cond_size = size + data_size <= max_buffer_size;
-        const bool cond_num = num_elem + additional_size <= maxsize;
+        const bool cond_num = num_elem + additional_size <= max_size;
 
         return cond_size && cond_num;
     }
@@ -91,7 +86,7 @@ struct CircularBufferState {
         const auto new_size = size - read_size;
 
         LOG_ASSERT(new_head < max_buffer_size, "Circular buffer head pointer is incorrect");
-        LOG_ASSERT(new_size >= 0 && new_size <= max_buffer_size, "New size is incorrect after reading from buffer");
+        LOG_ASSERT(new_size <= max_buffer_size, "New size is incorrect after reading from buffer");
 
         if (pop_message) {
             head = new_head;
@@ -102,7 +97,7 @@ struct CircularBufferState {
 public:
     static const size_t MIN_MSG_SIZE = sizeof(size_t) + 1;
     size_t max_buffer_size;
-    size_t maxsize;
+    size_t max_size;
     size_t head = 0, tail = 0, size = 0;
     size_t num_elem = 0;
 
@@ -125,34 +120,17 @@ public:
 
         constexpr size_t queue_size = sizeof(CircularBufferState);
 
-        // try {
         state_mem_ =
             std::make_shared<bip::shared_memory_object>(bip::open_or_create, state_name.c_str(), bip::read_write);
         state_mem_->truncate(queue_size);
         state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
         state_ = static_cast<CircularBufferState *>(state_region_.get_address());
         new (state_) CircularBufferState(max_buffer_size, maxsize);
-        // }
-        // catch (const bip::interprocess_exception &ex) {
-        //     state_mem_ =
-        //         std::make_shared<bip::shared_memory_object>(bip::open_only, state_name.c_str(), bip::read_write);
-        //     state_region_ = bip::mapped_region(*state_mem_, bip::read_write);
-        //     state_ = static_cast<CircularBufferState *>(state_region_.get_address());
-        //     new (state_) CircularBufferState(max_buffer_size, maxsize);
-        // }
 
-        // try {
         buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_or_create, buf_name.c_str(), bip::read_write);
         buf_mem_->truncate(static_cast<boost::interprocess::offset_t>(max_buffer_size));
         buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write);
         buf_ = static_cast<uint8_t *>(buf_region_.get_address());
-        // std::fill_n(buf_, max_buffer_size, 0);
-        // }
-        // catch (const bip::interprocess_exception &ex) {
-        //     buf_mem_ = std::make_shared<bip::shared_memory_object>(bip::open_only, buf_name.c_str(),
-        //     bip::read_write); buf_region_ = bip::mapped_region(*buf_mem_, bip::read_write); buf_ =
-        //     static_cast<uint8_t *>(buf_region_.get_address());
-        // }
     }
 
     ~CircularBuffer() {
@@ -204,11 +182,9 @@ public:
     py::typing::Tuple<py::bytes, int> read(bool block = true, float timeout = 2.0f) {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(state_->mutex);
         auto wait_remaining = float_seconds_to_chrono(timeout);
-        int wait_count = 0;
         while (state_->size <= 0) {
             if (!block || wait_remaining.count() <= 0)
                 return py::make_tuple(py::none(), Q_EMPTY);
-            wait_count++;
             wait_remaining = wait(wait_remaining, &state_->not_empty, &lock, &state_->not_empty_n_waiters);
         }
 
@@ -243,9 +219,9 @@ public:
 
     std::string get_name() const noexcept { return name_; }
 
-    size_t get_max_buffer_size() const noexcept { return state_->get_max_buffer_size(); }
+    size_t get_max_buffer_size() const noexcept { return state_->max_buffer_size; }
 
-    size_t get_max_size() const noexcept { return state_->get_max_size(); }
+    size_t get_max_size() const noexcept { return state_->max_size; }
 
     bool get_auto_unlink() const noexcept { return auto_unlink_; }
 
