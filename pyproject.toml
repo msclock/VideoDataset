@@ -41,8 +41,8 @@ urls.repository = "https://code.agibot.com/ai-platform/fast-context-queue"
 [dependency-groups]
 test = [
     "coverage>=7.6.10",
-    "pytest>=8.3.4",
     "lerobot==0.4.1",
+    "pytest>=8.3.4",
 ]
 doc = [
     "autodoc-pydantic>=2.2.0",
