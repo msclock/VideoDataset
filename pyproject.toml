@@ -90,11 +90,11 @@ test-skip = [ "*-win*", "*-macosx*", "*-manylinux*" ]
 src = [
     "src",
 ]
-fix = true
 exclude = [
     "cmake",
     "conanfile.py",
 ]
+fix = true
 lint.select = [
     "B",      # flake8-bugbear
     "D",      # pydocstyle
