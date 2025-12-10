@@ -91,6 +91,10 @@ src = [
     "src",
 ]
 fix = true
+exclude = [
+    "cmake",
+    "conanfile.py",
+]
 lint.select = [
     "B",      # flake8-bugbear
     "D",      # pydocstyle
