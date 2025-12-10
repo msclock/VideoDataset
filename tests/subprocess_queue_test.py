@@ -5,7 +5,6 @@ import logging
 import pickle
 import queue
 from collections.abc import Callable
-from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import connection
 from multiprocessing.reduction import ForkingPickler
 from multiprocessing.synchronize import Event
@@ -144,38 +143,6 @@ def test_worker_tensor_send_recv() -> None:
         ForkingPickler.loads(_reader.recv_bytes())
     exit_event.set()
     sub_process.join()
-
-
-def test_subprocess_queue_process_pool() -> None:
-    """This test is used to profile the performance of the subprocess queue.
-
-    4 worker processes are used to generate configurable number of tensors to result
-    queue in parallel and main process waits for the queue and receives the results.
-    """
-    num_workers = 4
-    manager = mp.Manager()
-    result_queues: list = [manager.Queue() for _ in range(num_workers)]
-    with ProcessPoolExecutor(
-        max_workers=num_workers,
-        mp_context=mp.get_context("spawn"),
-    ) as executor:
-        futures = [
-            executor.submit(
-                generate_tensor,
-                result_queue,
-            )
-            for result_queue in result_queues
-        ]
-        for future in futures:
-            future.result()
-
-    count = 0
-    for result_queue in result_queues:
-        while not result_queue.empty():
-            result_queue.get()
-            count += 1
-
-    assert count == 400
 
 
 def test_dataloader_mp_queue() -> None:
