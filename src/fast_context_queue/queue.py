@@ -1,4 +1,4 @@
-"""Implementation of a fast context queue using a circular buffer."""
+"""Implementation of a fast context queue using a shared memory pool."""
 # mypy: allow-untyped-defs
 
 import multiprocessing.queues
@@ -10,7 +10,7 @@ from fast_context_queue._core import TorchSegment, handle_t
 
 
 class _Queue(multiprocessing.queues.Queue):
-    """A fast context queue using a circular buffer."""
+    """A fast context queue using a shared memory pool."""
 
     def __init__(self, maxsize=0, *, ctx):
         """Use the same init method as multiprocessing.Queue."""
@@ -51,7 +51,7 @@ class _Queue(multiprocessing.queues.Queue):
             return obj
 
     def get_postprocess(self, obj: Any) -> Any:
-        """Convert handles to tensors from a tensor or a dict of tensors."""
+        """Convert handles to tensors from a handle or a dict of handles."""
         if isinstance(obj, handle_t):
             return self.segment.restore_tensor(obj)
         elif isinstance(obj, dict):
@@ -63,5 +63,5 @@ class _Queue(multiprocessing.queues.Queue):
 def Queue(maxsize=0, *, ctx=None) -> _Queue:
     """Create a fast context queue using a circular buffer."""
     if ctx is None:
-        ctx = multiprocessing.get_context()
-    return _Queue(maxsize=maxsize, ctx=ctx)
+        ctx = torch.multiprocessing.get_context()
+    return _Queue(maxsize, ctx=ctx)
