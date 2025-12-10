@@ -114,7 +114,7 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
         raise ValueError(f"Unknown queue type: {queue_type}")
     dataset = LeRobotDataset(
         repo_id=None,
-        root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
+        root="/mnt/public/qiuying/iros/task_2666",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
