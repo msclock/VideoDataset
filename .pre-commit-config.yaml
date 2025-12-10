@@ -38,6 +38,11 @@ repos:
           - python
           - pyi
         require_serial: true
+        exclude: |
+          (?x)(
+              ^(conanfile.py) |
+              ^(cmake/hooks/hook_rewrite_url.py)
+          )
       - id: ruff
         name: ruff
         entry: ruff check --force-exclude
