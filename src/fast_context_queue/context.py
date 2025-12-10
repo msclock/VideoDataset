@@ -2,10 +2,12 @@
 
 from multiprocessing.context import _default_context
 
+import fast_context_queue.queue as fq
+
 
 def Queue(self, maxsize: int = 0) -> fq.Queue:
     """Returns a queue object."""
-    return Queue(maxsize, ctx=self.get_context())
+    return fq.Queue(maxsize, ctx=self.get_context())
 
 
 def get_context(self, method=None):

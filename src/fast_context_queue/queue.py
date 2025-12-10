@@ -41,7 +41,7 @@ class Queue(multiprocessing.queues.Queue):
         obj = super().get(block=block, timeout=timeout)
         return self.get_postprocess(obj)
 
-    def put_preprocess(self, obj: Any) -> handle_t | list:
+    def put_preprocess(self, obj: Any) -> Any:
         """Convert tensors to handles from a tensor or a dict of tensors."""
         if isinstance(obj, torch.Tensor):
             return self.segment.save_tensor(obj)
@@ -50,7 +50,7 @@ class Queue(multiprocessing.queues.Queue):
         else:
             return obj
 
-    def get_postprocess(self, obj: handle_t | list) -> Any:
+    def get_postprocess(self, obj: Any) -> Any:
         """Convert handles to tensors from a tensor or a dict of tensors."""
         if isinstance(obj, handle_t):
             return self.segment.restore_tensor(obj)
