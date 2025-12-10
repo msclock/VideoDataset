@@ -32,17 +32,9 @@ class Queue(multiprocessing.queues.Queue):
         ) = state
         super().__setstate__(super_state)
 
-    def put_nowait(self, obj):
-        """Fast context queue put_nowait method for dicts of tensors."""
-        return self.put(obj, False)
-
     def put(self, obj: Any, block: bool = True, timeout: float | None = None) -> None:
         """Fast context queue put method for dicts of tensors."""
         super().put(self.put_preprocess(obj), block=block, timeout=timeout)
-
-    def get_nowait(self) -> Any:
-        """Fast context queue get_nowait method for dicts of tensors."""
-        return self.get(False)
 
     def get(self, block: bool = True, timeout: float | None = None) -> Any:
         """Fast context queue get method for dicts of tensors."""
