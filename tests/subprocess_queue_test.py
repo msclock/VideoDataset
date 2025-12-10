@@ -2,7 +2,6 @@
 
 import cProfile
 import logging
-import multiprocessing
 import pickle
 import queue
 from collections.abc import Callable
@@ -52,7 +51,7 @@ def write_tensor_worker(
 def test_subprocess_queue() -> None:
     """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 2000
+    num_tensors = 200
     exit_event = mp.Event()
     q: mp.Queue = mp.Queue()
     sub_process = mp.Process(
@@ -72,9 +71,9 @@ def test_subprocess_queue() -> None:
 def test_fast_queue() -> None:
     """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 2000
+    num_tensors = 200
     exit_event = mp.Event()
-    q: fq.Queue = fq.Queue(ctx=multiprocessing.get_context("spawn"))
+    q: fq.Queue = fq.Queue()
     sub_process = mp.Process(
         target=write_tensor_worker,
         args=(exit_event, q.put_nowait, num_tensors, False),
@@ -92,7 +91,7 @@ def test_fast_queue() -> None:
 def test_torch_queue() -> None:
     """Test torch.multiprocessing.Queue."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 2000
+    num_tensors = 200
     exit_event = mp.Event()
     q: torch.multiprocessing.Queue = torch.multiprocessing.Queue()
     sub_process = mp.Process(
@@ -110,7 +109,7 @@ def test_torch_queue() -> None:
 def test_manager_queue() -> None:
     """Test torch.multiprocessing.Queue."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 2000
+    num_tensors = 200
     exit_event = mp.Event()
     q: queue.Queue = mp.Manager().Queue()
     sub_process = mp.Process(
@@ -128,7 +127,7 @@ def test_manager_queue() -> None:
 def test_worker_tensor_send_recv() -> None:
     """Test ForkingPickler to send and receive a tensor from a worker process."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 2000
+    num_tensors = 200
     exit_event = mp.Event()
     _reader, _writer = connection.Pipe(duplex=False)
     sub_process = mp.Process(

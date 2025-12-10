@@ -9,12 +9,12 @@ import torch
 from fast_context_queue._core import TorchSegment, handle_t
 
 
-class Queue(multiprocessing.queues.Queue):
+class _Queue(multiprocessing.queues.Queue):
     """A fast context queue using a circular buffer."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, maxsize=0, *, ctx):
         """Use the same init method as multiprocessing.Queue."""
-        super().__init__(*args, **kwargs)
+        super().__init__(maxsize, ctx=ctx)
         self.segment = TorchSegment()
 
     def __getstate__(self):
@@ -58,3 +58,10 @@ class Queue(multiprocessing.queues.Queue):
             return {k: self.get_postprocess(v) for k, v in obj.items()}
         else:
             return obj
+
+
+def Queue(maxsize=0, *, ctx=None):
+    """Create a fast context queue using a circular buffer."""
+    if ctx is None:
+        ctx = multiprocessing.get_context()
+    return _Queue(maxsize=maxsize, ctx=ctx)
