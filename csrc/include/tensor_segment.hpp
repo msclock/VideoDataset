@@ -24,7 +24,6 @@ public:
     struct TensorMeta {
         uint32_t dtype;
         uint32_t ndim;
-        uint64_t numel;
         int64_t shape[16];
         int64_t stride[16];
     };
@@ -62,7 +61,6 @@ public:
         auto* meta = new (buf) TensorMeta{};
         meta->dtype = static_cast<uint32_t>(t.scalar_type());
         meta->ndim = static_cast<uint32_t>(t.dim());
-        meta->numel = static_cast<uint64_t>(t.numel());
         std::memcpy(meta->shape, t.sizes().data(), static_cast<size_t>(t.dim()) * sizeof(int64_t));
         std::memcpy(meta->stride, t.strides().data(), static_cast<size_t>(t.dim()) * sizeof(int64_t));
         std::memcpy(static_cast<char*>(buf) + sizeof(TensorMeta), t.data_ptr(), t.nbytes());
