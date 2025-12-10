@@ -1,11 +1,15 @@
 """multiprocessing queue context for torch.utils.data.DataLoader."""
 
-import multiprocessing
-from multiprocessing import *
+from multiprocessing.context import _default_context
 
-from fast_context_queue import queue
 
-__all__ = multiprocessing.__all__
+def Queue(self, maxsize: int = 0) -> fq.Queue:
+    """Returns a queue object."""
+    return Queue(maxsize, ctx=self.get_context())
 
-SpawnContext = get_context("spawn")
-SpawnContext.Queue = queue.Queue  # type: ignore[assignment, method-assign]
+
+def get_context(self, method=None):
+    """Returns a context object."""
+    ctx = _default_context.get_context(method)
+    ctx.Queue = Queue
+    return ctx
