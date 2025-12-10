@@ -10,6 +10,7 @@ from multiprocessing.reduction import ForkingPickler
 from multiprocessing.synchronize import Event
 from time import sleep
 
+import pytest
 import torch
 import torch.multiprocessing as mp
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
@@ -47,12 +48,23 @@ def write_tensor_worker(
         continue
 
 
-def test_subprocess_queue() -> None:
-    """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
+@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch", "manager"])
+def test_queue_single_tensor(queue_type: str) -> None:
+    """Test different types of queues to send and receive a tensor from a worker."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 200
+    num_tensors = 2000
     exit_event = mp.Event()
-    q: mp.Queue = mp.Queue()
+    if queue_type == "mp":
+        q: mp.Queue = mp.Queue()
+    elif queue_type == "fq":
+        q = fq.Queue()
+    elif queue_type == "torch":
+        q = torch.multiprocessing.Queue()
+    elif queue_type == "manager":
+        q: queue.Queue = mp.Manager().Queue()
+    else:
+        raise ValueError(f"Unknown queue type: {queue_type}")
+
     sub_process = mp.Process(
         target=write_tensor_worker,
         args=(exit_event, q.put_nowait, num_tensors, False),
@@ -63,62 +75,6 @@ def test_subprocess_queue() -> None:
         for _ in range(num_tensors):
             q.get()
         pr.print_stats(sort="tottime")
-    exit_event.set()
-    sub_process.join()
-
-
-def test_fast_queue() -> None:
-    """Test multiprocessing.Queue to send and receive a tensor from a worker process."""
-    mp.set_start_method("spawn", force=True)
-    num_tensors = 200
-    exit_event = mp.Event()
-    q: fq.Queue = fq.Queue()
-    sub_process = mp.Process(
-        target=write_tensor_worker,
-        args=(exit_event, q.put_nowait, num_tensors, False),
-    )
-    sub_process.start()
-    sleep(3)
-    with cProfile.Profile() as pr:
-        for _ in range(num_tensors):
-            q.get()
-        pr.print_stats(sort="tottime")
-    exit_event.set()
-    sub_process.join()
-
-
-def test_torch_queue() -> None:
-    """Test torch.multiprocessing.Queue."""
-    mp.set_start_method("spawn", force=True)
-    num_tensors = 200
-    exit_event = mp.Event()
-    q: torch.multiprocessing.Queue = torch.multiprocessing.Queue()
-    sub_process = mp.Process(
-        target=write_tensor_worker,
-        args=(exit_event, q.put_nowait, num_tensors, False),
-    )
-    sub_process.start()
-    sleep(3)
-    for _ in range(num_tensors):
-        q.get()
-    exit_event.set()
-    sub_process.join()
-
-
-def test_manager_queue() -> None:
-    """Test torch.multiprocessing.Queue."""
-    mp.set_start_method("spawn", force=True)
-    num_tensors = 200
-    exit_event = mp.Event()
-    q: queue.Queue = mp.Manager().Queue()
-    sub_process = mp.Process(
-        target=write_tensor_worker,
-        args=(exit_event, q.put_nowait, num_tensors, False),
-    )
-    sub_process.start()
-    sleep(3)
-    for _ in range(num_tensors):
-        q.get()
     exit_event.set()
     sub_process.join()
 

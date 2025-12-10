@@ -1,4 +1,5 @@
 """multiprocessing queue context for torch.utils.data.DataLoader."""
+# mypy: allow-attr-def, allow-untyped-defs
 
 from multiprocessing.context import BaseContext, _default_context
 
@@ -12,7 +13,7 @@ def _get_context(method: str | None = None) -> BaseContext:
     def queue_factory(maxsize: int = 0, ctx: BaseContext = ctx):
         return fq.Queue(maxsize, ctx=ctx)
 
-    ctx.Queue = queue_factory
+    ctx.Queue = queue_factory  # type: ignore[method-assign]
     return ctx
 
 

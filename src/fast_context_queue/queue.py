@@ -1,5 +1,5 @@
 """Implementation of a fast context queue using a circular buffer."""
-# mypy: allow-attr-def, allow-untyped-defs
+# mypy: allow-untyped-defs
 
 import multiprocessing.queues
 from typing import Any
@@ -30,7 +30,7 @@ class _Queue(multiprocessing.queues.Queue):
             self.segment,
             super_state,
         ) = state
-        super().__setstate__(super_state)
+        super().__setstate__(super_state)  # type: ignore[misc]
 
     def put(self, obj: Any, block: bool = True, timeout: float | None = None) -> None:
         """Fast context queue put method for dicts of tensors."""
@@ -60,7 +60,7 @@ class _Queue(multiprocessing.queues.Queue):
             return obj
 
 
-def Queue(maxsize=0, *, ctx=None):
+def Queue(maxsize=0, *, ctx=None) -> _Queue:
     """Create a fast context queue using a circular buffer."""
     if ctx is None:
         ctx = multiprocessing.get_context()
