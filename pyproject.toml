@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "scikit_build_core.build"
-requires = [ "conan", "mypy", "scikit-build-core" ]
+requires = [ "conan", "mypy", "scikit-build-core", "torch" ]
 
 [project]
 name = "fast-context-queue"
