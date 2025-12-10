@@ -1,5 +1,5 @@
 """multiprocessing queue context for torch.utils.data.DataLoader."""
-# mypy: allow-attr-def, allow-untyped-defs
+# mypy: allow-untyped-defs
 
 from multiprocessing.context import BaseContext, _default_context
 

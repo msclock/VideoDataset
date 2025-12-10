@@ -11,8 +11,8 @@ from time import sleep
 import pytest
 import torch
 import torch.multiprocessing as mp
-from lerobot.datasets.lerobot_dataset import (
-    LeRobotDataset,  # type: ignore[import-untyped]
+from lerobot.datasets.lerobot_dataset import (  # type: ignore[import-untyped]
+    LeRobotDataset,
 )
 
 import fast_context_queue as fq

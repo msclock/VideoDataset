@@ -145,6 +145,7 @@ exclude = [
     "build",
     "doc",
     "conanfile.py",
+    "cmake",
 ]
 no_implicit_optional = true
 show_error_codes = true

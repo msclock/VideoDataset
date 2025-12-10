@@ -30,19 +30,6 @@ repos:
       - id: trailing-whitespace
   - repo: local
     hooks:
-      - id: mypy
-        name: mypy
-        entry: pipenv run python -m mypy
-        language: system
-        types_or:
-          - python
-          - pyi
-        require_serial: true
-        exclude: |
-          (?x)(
-              ^(conanfile.py) |
-              ^(cmake/hooks/hook_rewrite_url.py)
-          )
       - id: ruff
         name: ruff
         entry: ruff check --force-exclude
