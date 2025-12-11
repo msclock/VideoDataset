@@ -35,7 +35,7 @@ public:
 
     explicit TensorSegment(const size_t pool_size = POOL_SIZE_DEFAULT, std::string name = "")
         : pool_size_(pool_size),
-          name_(name.empty() ? _safe_base("TensorSegment") : std::move(name)) {
+          name_(name.empty() ? _safe_base("TensorSegment_") : std::move(name)) {
         segment_ = bip::managed_shared_memory(bip::open_or_create, name_.c_str(), pool_size_);
     };
 
