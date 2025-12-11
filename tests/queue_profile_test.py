@@ -3,10 +3,13 @@
 import cProfile
 import logging
 import pickle
-from collections.abc import Callable
+import pstats
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from multiprocessing.reduction import ForkingPickler
 from multiprocessing.synchronize import Event
 from time import sleep
+from typing import Any
 
 import pytest
 import torch
@@ -18,6 +21,19 @@ from lerobot.datasets.lerobot_dataset import (  # type: ignore[import-untyped]
 import fast_context_queue as fq
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def cprofile_context(
+    sort: str = "tottime", max_line: int = 10
+) -> Generator[None, Any, None]:
+    """Context manager to profile code using cProfile."""
+    pr = cProfile.Profile()
+    pr.enable()
+    yield
+    pr.disable()
+
+    pstats.Stats(pr).strip_dirs().sort_stats(sort).print_stats(max_line)
 
 
 def write_tensor_worker(
@@ -64,10 +80,9 @@ def test_queue_single_tensor(queue_type: str) -> None:
     )
     sub_process.start()
     sleep(3)
-    with cProfile.Profile() as pr:
+    with cprofile_context():
         for _ in range(num_tensors):
             q.get()
-        pr.print_stats(sort="tottime")
     exit_event.set()
     sub_process.join()
 
@@ -91,13 +106,13 @@ def test_queue_context_in_dataloader(queue_type: str) -> None:
         num_workers=num_workers,
         multiprocessing_context=get_context("spawn"),
     )
-    with cProfile.Profile() as pr:
-        data_loader_iter = iter(data_loader)
-        count = 0
+
+    data_loader_iter = iter(data_loader)
+    count = 0
+    with cprofile_context():
         for _ in next(data_loader_iter):
             count += 1
-        assert count == num_tensors
-        pr.print_stats(sort="tottime")
+    assert count == num_tensors
 
 
 @pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
@@ -122,8 +137,7 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
         multiprocessing_context=get_context("spawn"),
     )
 
-    with cProfile.Profile() as pr:
-        data_loader_iter = iter(data_loader)
+    data_loader_iter = iter(data_loader)
+    with cprofile_context():
         for _ in next(data_loader_iter):
             pass
-        pr.print_stats(sort="tottime")
