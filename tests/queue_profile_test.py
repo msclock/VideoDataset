@@ -76,7 +76,7 @@ def test_queue_single_tensor(queue_type: str) -> None:
 
     sub_process = mp.Process(
         target=write_tensor_worker,
-        args=(exit_event, q.put_nowait, num_tensors, False),
+        args=(exit_event, q.put, num_tensors, False),
     )
     sub_process.start()
     sleep(3)
@@ -101,7 +101,7 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
         raise ValueError(f"Unknown queue type: {queue_type}")
     dataset = LeRobotDataset(
         repo_id=None,
-        root="/mnt/public/qiuying/iros/task_2666",
+        root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
