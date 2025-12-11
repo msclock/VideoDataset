@@ -89,7 +89,7 @@ def test_queue_single_tensor(queue_type: str) -> None:
 def test_queue_context_with_lerobot(queue_type: str) -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
     mp.set_start_method("spawn", force=True)
-    num_workers = 2
+    num_workers = 16
     if queue_type == "mp":
         get_context = mp.get_context
     elif queue_type == "fq":
