@@ -62,6 +62,7 @@ Args:
              py::doc(R"(Save a tensor to shared memory.)"))
         .def("restore_tensor",
              &TensorSegment::handle_to_tensor,
+             py::keep_alive<0, 1>(),
              py::arg("handle"),
              py::doc(R"(Restore a tensor from shared memory.)"));
 

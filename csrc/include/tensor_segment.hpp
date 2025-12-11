@@ -69,6 +69,11 @@ public:
 
     torch::Tensor handle_to_tensor(handle_t h) {
         void* buf = segment_.get_address_from_handle(h.handle);
+        auto deleter = std::shared_ptr<void>(buf, [this, buf](void*) {
+            if (this->check_shm()) {
+                this->segment_.deallocate(buf);
+            }
+        });
         auto* meta = static_cast<TensorMeta*>(buf);
         auto options = torch::TensorOptions()
                            .dtype(static_cast<torch::ScalarType>(meta->dtype))
@@ -77,15 +82,24 @@ public:
         std::vector<int64_t> sizes(meta->shape, meta->shape + meta->ndim);
         std::vector<int64_t> strides(meta->stride, meta->stride + meta->ndim);
         return torch::from_blob(
-                   static_cast<char*>(buf) + sizeof(TensorMeta),
-                   sizes,
-                   strides,
-                   [this, buf](void*) { this->segment_.deallocate(buf); },
-                   options)
-            .clone();
+            static_cast<char*>(buf) + sizeof(TensorMeta),
+            sizes,
+            strides,
+            [deleter](void*) {},
+            options);
     }
 
     static std::string _safe_base(const std::string& prefix) { return prefix + std::to_string(std::rand()); }
+
+    bool check_shm() const noexcept {
+        try {
+            bip::managed_shared_memory shm(bip::open_only, name_.c_str());
+        }
+        catch (const bip::interprocess_exception&) {
+            return false;
+        }
+        return true;
+    }
 
 private:
     size_t pool_size_;
