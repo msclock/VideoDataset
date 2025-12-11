@@ -61,7 +61,7 @@ def write_tensor_worker(
 def test_queue_single_tensor(queue_type: str) -> None:
     """Test different types of queues to send and receive a tensor from a worker."""
     mp.set_start_method("spawn", force=True)
-    num_tensors = 1000
+    num_tensors = 2000
     exit_event = mp.Event()
     if queue_type == "mp":
         q: mp.Queue = mp.Queue()
@@ -100,8 +100,8 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
         raise ValueError(f"Unknown queue type: {queue_type}")
     dataset = LeRobotDataset(
         repo_id=None,
-        root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
-        # root="/mnt/public/qiuying/iros/task_2666",
+        # root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
+        root="/mnt/public/qiuying/iros/task_2666",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
