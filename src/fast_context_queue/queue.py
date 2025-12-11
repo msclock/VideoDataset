@@ -5,8 +5,9 @@ import multiprocessing.queues
 from typing import Any
 
 import torch
+from torch.multiprocessing.queue import ConnectionWrapper
 
-from fast_context_queue._core import TorchSegment, handle_t
+from fast_context_queue._core import POOL_SIZE_DEFAULT, TorchSegment, handle_t
 
 
 class _Queue(multiprocessing.queues.Queue):
@@ -15,7 +16,11 @@ class _Queue(multiprocessing.queues.Queue):
     def __init__(self, maxsize=0, *, ctx):
         """Use the same init method as multiprocessing.Queue."""
         super().__init__(maxsize, ctx=ctx)
-        self.segment = TorchSegment()
+        self.segment = TorchSegment(POOL_SIZE_DEFAULT * 10)
+        self._reader: ConnectionWrapper = ConnectionWrapper(self._reader)
+        self._writer: ConnectionWrapper = ConnectionWrapper(self._writer)
+        self._send = self._writer.send
+        self._recv = self._reader.recv
 
     def __getstate__(self):
         """Save the segment and the state of the queue."""
@@ -39,7 +44,10 @@ class _Queue(multiprocessing.queues.Queue):
     def get(self, block: bool = True, timeout: float | None = None) -> Any:
         """Fast context queue get method for dicts of tensors."""
         obj = super().get(block=block, timeout=timeout)
-        return self.get_postprocess(obj)
+        if isinstance(obj, handle_t):
+            return self.segment.restore_tensor(obj)
+        else:
+            return self.get_postprocess(obj)
 
     def put_preprocess(self, obj: Any) -> Any:
         """Convert tensors to handles from a tensor or a dict of tensors."""

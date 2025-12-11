@@ -2,6 +2,7 @@
 
 import cProfile
 import logging
+import multiprocessing as mp
 import pickle
 import pstats
 from collections.abc import Callable, Generator
@@ -13,7 +14,6 @@ from typing import Any
 
 import pytest
 import torch
-import torch.multiprocessing as mp
 from lerobot.datasets.lerobot_dataset import (  # type: ignore[import-untyped]
     LeRobotDataset,
 )
@@ -48,7 +48,7 @@ def write_tensor_worker(
         if serialize:
             _writer_send(
                 ForkingPickler.dumps(
-                    (True, shared_tensor), protocol=pickle.HIGHEST_PROTOCOL
+                    shared_tensor, protocol=pickle.HIGHEST_PROTOCOL
                 ).tobytes()
             )
         else:
@@ -57,7 +57,7 @@ def write_tensor_worker(
         continue
 
 
-@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch", "manager"])
+@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
 def test_queue_single_tensor(queue_type: str) -> None:
     """Test different types of queues to send and receive a tensor from a worker."""
     mp.set_start_method("spawn", force=True)
@@ -69,8 +69,6 @@ def test_queue_single_tensor(queue_type: str) -> None:
         q = fq.Queue()
     elif queue_type == "torch":
         q = torch.multiprocessing.Queue()
-    elif queue_type == "manager":
-        q = mp.Manager().Queue()  # type: ignore[assignment]
     else:
         raise ValueError(f"Unknown queue type: {queue_type}")
 
@@ -90,7 +88,8 @@ def test_queue_single_tensor(queue_type: str) -> None:
 @pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
 def test_queue_context_with_lerobot(queue_type: str) -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
-    num_workers = 1
+    mp.set_start_method("spawn", force=True)
+    num_workers = 2
     if queue_type == "mp":
         get_context = mp.get_context
     elif queue_type == "fq":
@@ -102,6 +101,7 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
     dataset = LeRobotDataset(
         repo_id=None,
         root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
+        # root="/mnt/public/qiuying/iros/task_2666",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
