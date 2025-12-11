@@ -76,7 +76,7 @@ def test_queue_single_tensor(queue_type: str) -> None:
 def test_queue_context_in_dataloader(queue_type: str) -> None:
     """Test different types of queues to send and receive a tensor from a worker."""
     num_workers = 1
-    num_tensors = 100
+    num_tensors = 1000
     if queue_type == "mp":
         get_context = mp.get_context
     elif queue_type == "fq":
