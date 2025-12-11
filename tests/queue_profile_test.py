@@ -101,7 +101,7 @@ def test_queue_context_with_lerobot(queue_type: str) -> None:
     dataset = LeRobotDataset(
         repo_id=None,
         # root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
-        root="/mnt/public/qiuying/iros/task_2666",
+        root="/mnt/public/qiuying/iros/v30/task_2666",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
