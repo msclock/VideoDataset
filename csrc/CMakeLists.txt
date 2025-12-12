@@ -65,7 +65,7 @@ target_include_interface_directories(
 target_link_libraries(
   ${target_name_internal}
   PUBLIC ${LIBNVCUVID} ${CUDA_CUDA_LIBRARY} PkgConfig::FFMPEG
-         ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY} pybind11::pybind11 Python::Python)
+         ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY} pybind11::pybind11)
 
 pybind11_add_module(${target_name} MODULE)
 warn_target(${target_name})
