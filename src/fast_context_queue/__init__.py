@@ -5,6 +5,13 @@ from __future__ import annotations
 import importlib
 import os
 import platform
+from multiprocessing import reduction
+from typing import Any
+
+import torch
+from torch.multiprocessing import reductions
+
+from fast_context_queue._core import POOL_SIZE_DEFAULT, TorchSegment, handle_t
 
 
 def _setup_environment() -> None:
@@ -29,7 +36,25 @@ def _setup_environment() -> None:
 
 _setup_environment()
 
-from fast_context_queue.context import get_context  # noqa: E402
-from fast_context_queue.queue import Queue  # noqa: E402
+segment = TorchSegment(pool_size=POOL_SIZE_DEFAULT * 10)
 
-__all__ = ["Queue", "get_context"]
+
+def rebuild_tensor_cpu(handle: handle_t) -> torch.Tensor:
+    """Rebuild tensor from handle."""
+    return segment.restore_tensor(handle)
+
+
+def reduce_tensor_cpu(tensor: torch.Tensor) -> tuple:
+    """Reduce tensors on device cpu."""
+    h = segment.save_tensor(tensor)
+    return rebuild_tensor_cpu, (h,)
+
+
+def _reduce_tensor(tensor: Any) -> Any:
+    """Reduce tensors on device cpu or other devices."""
+    if tensor.device.type == "cpu":
+        return reduce_tensor_cpu(tensor)
+    return reductions.reduce_tensor(tensor)
+
+
+reduction.register(torch.Tensor, _reduce_tensor)

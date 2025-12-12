@@ -9,10 +9,12 @@
 #include <pybind11/stl.h>
 #include <torch/torch.h>
 #include <boost/interprocess/allocators/allocator.hpp>
+#include <boost/interprocess/containers/allocation_type.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <cstdio>
 
 namespace bip = boost::interprocess;
 
@@ -41,7 +43,10 @@ public:
 
     TensorSegment(const TensorSegment& o) : TensorSegment(o.pool_size_, o.name_){};
 
-    ~TensorSegment() { bip::shared_memory_object::remove(name_.c_str()); }
+    ~TensorSegment() {
+        fprintf(stderr, "TensorSegment %s is destroyed\n", name_.c_str());
+        bip::shared_memory_object::remove(name_.c_str());
+    }
 
     std::string name() const { return name_; }
 
@@ -56,7 +61,23 @@ public:
             buf = segment_.allocate_aligned(sizeof(TensorMeta) + t.nbytes(), 128);
         }
         catch (bip::interprocess_exception& e) {
-            TORCH_CHECK(false, "Shared memory pool is full, please increase the pool size");
+            const int max_attempts = 5;
+            for (int attempt = 0; attempt < max_attempts; ++attempt) {
+                this->pool_size_ = segment_.get_size();
+                auto* current_ptr = segment_.get_address();
+                auto new_size = this->pool_size_ + 30 * POOL_SIZE_DEFAULT;
+                segment_.allocation_command(boost::interprocess::expand_fwd, this->pool_size_, new_size, current_ptr);
+                try {
+                    buf = segment_.allocate_aligned(sizeof(TensorMeta) + t.nbytes(), 128);
+                    break;
+                }
+                catch (bip::interprocess_exception& e) {
+                    fprintf(stderr, "Attempt %d failed: %s\n", attempt + 1, e.what());
+                    if (attempt == max_attempts - 1) {
+                        throw;
+                    }
+                }
+            }
         }
         auto* meta = new (buf) TensorMeta{};
         meta->dtype = static_cast<uint32_t>(t.scalar_type());
@@ -82,11 +103,12 @@ public:
         std::vector<int64_t> sizes(meta->shape, meta->shape + meta->ndim);
         std::vector<int64_t> strides(meta->stride, meta->stride + meta->ndim);
         return torch::from_blob(
-            static_cast<char*>(buf) + sizeof(TensorMeta),
-            sizes,
-            strides,
-            [deleter](void*) {},
-            options);
+                   static_cast<char*>(buf) + sizeof(TensorMeta),
+                   sizes,
+                   strides,
+                   [deleter](void*) {},
+                   options)
+            .clone();
     }
 
     static std::string _safe_base(const std::string& prefix) { return prefix + std::to_string(std::rand()); }

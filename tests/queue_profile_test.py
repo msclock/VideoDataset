@@ -18,7 +18,9 @@ from lerobot.datasets.lerobot_dataset import (  # type: ignore[import-untyped]
     LeRobotDataset,
 )
 
-import fast_context_queue as fq
+import fast_context_queue
+
+_reduction = fast_context_queue
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def write_tensor_worker(
         continue
 
 
-@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
+@pytest.mark.parametrize("queue_type", ["mp", "torch"])
 def test_queue_single_tensor(queue_type: str) -> None:
     """Test different types of queues to send and receive a tensor from a worker."""
     mp.set_start_method("spawn", force=True)
@@ -65,8 +67,6 @@ def test_queue_single_tensor(queue_type: str) -> None:
     exit_event = mp.Event()
     if queue_type == "mp":
         q: mp.Queue = mp.Queue()
-    elif queue_type == "fq":
-        q = fq.Queue()
     elif queue_type == "torch":
         q = torch.multiprocessing.Queue()
     else:
@@ -85,23 +85,20 @@ def test_queue_single_tensor(queue_type: str) -> None:
     sub_process.join()
 
 
-@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
+@pytest.mark.parametrize("queue_type", ["mp", "torch"])
 def test_queue_context_with_lerobot(queue_type: str) -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
-    mp.set_start_method("spawn", force=True)
-    num_workers = 16
+    num_workers = 2
     if queue_type == "mp":
         get_context = mp.get_context
-    elif queue_type == "fq":
-        get_context = fq.get_context  # type: ignore[assignment]
     elif queue_type == "torch":
         get_context = torch.multiprocessing.get_context
     else:
         raise ValueError(f"Unknown queue type: {queue_type}")
     dataset = LeRobotDataset(
         repo_id=None,
-        # root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
-        root="/mnt/public/qiuying/iros/task_2666",
+        root="/mnt/public/fengli/lerobot/ucsd_kitchen_dataset",
+        # root="/mnt/public/qiuying/iros/v30/task_2666",
     )
     data_loader = torch.utils.data.DataLoader(
         dataset,
