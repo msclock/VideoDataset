@@ -55,6 +55,8 @@ class _Queue(multiprocessing.queues.Queue):
             return self.segment.save_tensor(obj)
         elif isinstance(obj, dict):
             return {k: self.put_preprocess(v) for k, v in obj.items()}
+        elif isinstance(obj, list | tuple):
+            return type(obj)(self.put_preprocess(v) for v in obj)
         else:
             return obj
 
@@ -64,6 +66,8 @@ class _Queue(multiprocessing.queues.Queue):
             return self.segment.restore_tensor(obj)
         elif isinstance(obj, dict):
             return {k: self.get_postprocess(v) for k, v in obj.items()}
+        elif isinstance(obj, list | tuple):
+            return type(obj)(self.get_postprocess(v) for v in obj)
         else:
             return obj
 

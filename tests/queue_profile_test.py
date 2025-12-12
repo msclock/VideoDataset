@@ -98,8 +98,8 @@ def test_queue_in_dataloader(queue_type: str) -> None:
     else:
         raise ValueError(f"Unknown queue type: {queue_type}")
     num_workers = 1
-    num_tensors = 200
-    tensors = [torch.rand(10, 1, 1280, 720) for _ in range(num_tensors)]
+    num_tensors = 100
+    tensors = [torch.rand(100, 1280, 720) for _ in range(num_tensors)]
     data_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*tensors),
         num_workers=num_workers,
@@ -114,7 +114,7 @@ def test_queue_in_dataloader(queue_type: str) -> None:
 
 
 @pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
-def test_queue_context_with_lerobot(queue_type: str) -> None:
+def test_queue_with_lerobot(queue_type: str) -> None:
     """Profile the performance of the subprocess queue with LeRobotDataset."""
     mp.set_start_method("spawn", force=True)
     num_workers = 16
