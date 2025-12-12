@@ -86,8 +86,36 @@ def test_queue_single_tensor(queue_type: str) -> None:
 
 
 @pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
-def test_queue_context_with_lerobot(queue_type: str) -> None:
+def test_queue_in_dataloader(queue_type: str) -> None:
     """Profile the performance of the subprocess queue with DataLoader."""
+    mp.set_start_method("spawn", force=True)
+    if queue_type == "mp":
+        get_context = mp.get_context
+    elif queue_type == "fq":
+        get_context = fq.get_context  # type: ignore[assignment]
+    elif queue_type == "torch":
+        get_context = torch.multiprocessing.get_context
+    else:
+        raise ValueError(f"Unknown queue type: {queue_type}")
+    num_workers = 1
+    num_tensors = 200
+    tensors = [torch.rand(10, 1, 1280, 720) for _ in range(num_tensors)]
+    data_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(*tensors),
+        num_workers=num_workers,
+        multiprocessing_context=get_context("spawn"),
+    )
+
+    count = 0
+    with cprofile_context():
+        for _ in data_loader:
+            count += 1
+    assert count == num_tensors
+
+
+@pytest.mark.parametrize("queue_type", ["mp", "fq", "torch"])
+def test_queue_context_with_lerobot(queue_type: str) -> None:
+    """Profile the performance of the subprocess queue with LeRobotDataset."""
     mp.set_start_method("spawn", force=True)
     num_workers = 16
     if queue_type == "mp":
