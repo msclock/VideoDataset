@@ -14,7 +14,7 @@ on:
 
 jobs:
   build_wheels:
-    name: ${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.build }} wheels
+    name: ${{ matrix.os }}, ${{ matrix.arch }}, cp${{ matrix.py }}-${{ matrix.build }} wheels
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -23,6 +23,7 @@ jobs:
         arch: [x86_64, aarch64]
         build: [manylinux]
         qemu_arch: [aarch64]
+        py: [310, 311, 312, 313, 314, 314t]
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +63,7 @@ jobs:
         run: pipx run cibuildwheel==3.3.0 --output-dir wheelhouse
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_BUILD: '*${{ matrix.build }}*'
+          CIBW_BUILD: 'cp${{ matrix.py }}-${{ matrix.build }}*'
           CIBW_BEFORE_ALL: >
             yum config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/${{ contains(matrix.arch, 'aarch64') && 'sbsa' || matrix.arch }}/cuda-rhel8.repo &&
             yum -y install wget cuda-nvcc-12-9 cuda-cudart-devel-12-9 cuda-nvrtc-devel-12-9 nvidia-driver-cuda-libs &&
@@ -81,5 +82,5 @@ jobs:
           inputs.extra && contains(matrix.qemu_arch, matrix.arch)
         uses: actions/upload-artifact@v4
         with:
-          name: cibw-${{ matrix.os }}-${{ matrix.build }}-${{ matrix.arch }}
+          name: cibw-${{ matrix.os }}-${{ matrix.py }}-${{ matrix.build }}-${{ matrix.arch }}
           path: wheelhouse/*.whl
