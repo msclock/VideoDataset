@@ -29,7 +29,7 @@ extern "C" {
 
 #include "core/NvDecoder.h"
 
-cudaVideoCodec avCodec2NvCodec(AVCodecID id) {
+inline cudaVideoCodec avCodec2NvCodec(AVCodecID id) {
     switch (id) {
         case AV_CODEC_ID_MPEG1VIDEO:
             return cudaVideoCodec_MPEG1;
@@ -104,9 +104,16 @@ public:
                              || !strcmp(fmtCtx->iformat->long_name, "FLV (Flash Video)")
                              || !strcmp(fmtCtx->iformat->long_name, "Matroska / WebM"));
 
+        av_init_packet(&pkt);
+        pkt.data = NULL;
+        pkt.size = 0;
+        av_init_packet(&pktFiltered);
+        pktFiltered.data = NULL;
+        pktFiltered.size = 0;
+
         this->initBitstreamFilterContext();
-        pkt.reset(av_packet_alloc());
-        pktFiltered.reset(av_packet_alloc());
+        // pkt.reset(av_packet_alloc());
+        // pktFiltered.reset(av_packet_alloc());
     }
 
     ~Demuxer() {
@@ -144,13 +151,13 @@ public:
 
         *videoBytes = 0;
 
-        if (pkt->data) {
-            av_packet_unref(pkt.get());
+        if (pkt.data) {
+            av_packet_unref(&pkt);
         }
         int e = 0;
 
-        while ((e = av_read_frame(fmtCtx.get(), pkt.get())) >= 0 && pkt->stream_index != this->videoStreamIdx) {
-            av_packet_unref(pkt.get());
+        while ((e = av_read_frame(fmtCtx.get(), &pkt)) >= 0 && pkt.stream_index != this->videoStreamIdx) {
+            av_packet_unref(&pkt);
         }
 
         if (e < 0) {
@@ -159,19 +166,19 @@ public:
 
         // Process video packet (bitstream filtering for H.264/H.265)
         if (this->bMp4H264 || this->bMp4HEVC) {
-            if (pktFiltered->data) {
-                av_packet_unref(pktFiltered.get());
+            if (pktFiltered.data) {
+                av_packet_unref(&pktFiltered);
             }
-            ck(av_bsf_send_packet(this->bsfCtx.get(), pkt.get()));
-            ck(av_bsf_receive_packet(this->bsfCtx.get(), pktFiltered.get()));
-            *video = pktFiltered->data;
-            *videoBytes = pktFiltered->size;
-            timestamp = pktFiltered->pts;
+            ck(av_bsf_send_packet(this->bsfCtx.get(), &pkt));
+            ck(av_bsf_receive_packet(this->bsfCtx.get(), &pktFiltered));
+            *video = pktFiltered.data;
+            *videoBytes = pktFiltered.size;
+            timestamp = pktFiltered.pts;
         }
         else {
-            *video = pkt->data;
-            *videoBytes = pkt->size;
-            timestamp = pkt->pts;
+            *video = pkt.data;
+            *videoBytes = pkt.size;
+            timestamp = pkt.pts;
         }
         return true;
     }
@@ -213,16 +220,17 @@ private:
                                                                           av_bsf_free(&p);
                                                                       }
                                                                   }};
-    std::unique_ptr<AVPacket, void (*)(AVPacket*)> pkt{nullptr, [](AVPacket* p) {
-                                                           if (p) {
-                                                               av_packet_free(&p);
-                                                           }
-                                                       }};
-    std::unique_ptr<AVPacket, void (*)(AVPacket*)> pktFiltered{nullptr, [](AVPacket* p) {
-                                                                   if (p)
-                                                                       (av_packet_free(&p));
-                                                               }};
+    // std::unique_ptr<AVPacket, void (*)(AVPacket*)> pkt{nullptr, [](AVPacket* p) {
+    //                                                        if (p) {
+    //                                                            av_packet_free(&p);
+    //                                                        }
+    //                                                    }};
+    // std::unique_ptr<AVPacket, void (*)(AVPacket*)> pktFiltered{nullptr, [](AVPacket* p) {
+    //                                                                if (p)
+    //                                                                    (av_packet_free(&p));
+    //                                                            }};
 
+    AVPacket pkt, pktFiltered;
     AVCodecID eVideoCodec;
     int videoStreamIdx;
     bool bMp4H264{false};

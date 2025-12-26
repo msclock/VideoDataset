@@ -21,7 +21,7 @@ endif()
 
 execute_process(
   COMMAND ${Python_EXECUTABLE} -c
-          "import site;print(';'.join(site.getsitepackages()))"
+  "import site;print(';'.join(site.getsitepackages()))"
   OUTPUT_VARIABLE _site_dirs
   OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE _site_cmd_retval
@@ -39,7 +39,7 @@ endif()
 find_package(Torch REQUIRED)
 
 find_library(TORCH_PYTHON_LIBRARY torch_python PATH
-             "${TORCH_INSTALL_PREFIX}/lib")
+  "${TORCH_INSTALL_PREFIX}/lib")
 
 set(target_name _decoder)
 set(target_name_internal ${target_name}_internal)
@@ -55,7 +55,7 @@ sanitize_target(${target_name_internal})
 generate_git_header(VERSION_NAMESPACE_PREFIX ${target_name})
 
 target_sources(${target_name_internal} PRIVATE ${${target_name_internal}_srcs}
-                                               ${${target_name_internal}_hdrs})
+  ${${target_name_internal}_hdrs})
 
 target_include_interface_directories(
   ${target_name_internal} ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -65,7 +65,7 @@ target_include_interface_directories(
 target_link_libraries(
   ${target_name_internal}
   PUBLIC ${LIBNVCUVID} ${CUDA_CUDA_LIBRARY} PkgConfig::FFMPEG
-         ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY} pybind11::pybind11)
+  ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY} pybind11::pybind11)
 
 pybind11_add_module(${target_name} MODULE)
 warn_target(${target_name})
@@ -73,7 +73,7 @@ harden_target(${target_name})
 sanitize_target(${target_name})
 
 target_link_libraries(${target_name} PRIVATE ${target_name_internal}
-                                             pybind11::module)
+  pybind11::module)
 
 find_program(_STUBGEN stubgen)
 if(_STUBGEN)
@@ -81,10 +81,10 @@ if(_STUBGEN)
     TARGET ${target_name}
     POST_BUILD
     COMMAND
-      ${CMAKE_COMMAND} -E env
-      "PYTHONPATH=$<TARGET_FILE_DIR:${target_name}>:$ENV{PYTHONPATH}"
-      ${_STUBGEN} -o "${CMAKE_SOURCE_DIR}/src/videodataset" --include-docstrings
-      -m ${target_name}
+    ${CMAKE_COMMAND} -E env
+    "PYTHONPATH=$<TARGET_FILE_DIR:${target_name}>:$ENV{PYTHONPATH}"
+    ${_STUBGEN} -o "${CMAKE_SOURCE_DIR}/src/videodataset" --include-docstrings
+    -m ${target_name}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating .pyi stubs for _decoder")
 endif()
@@ -93,7 +93,7 @@ install(TARGETS ${target_name} DESTINATION ${CMAKE_PROJECT_NAME})
 
 message(
   STATUS
-    "Exclude post regexes: x86_64-linux-gnu;/opt;/tmp;/lib64;/usr/local;${_site_dirs}"
+  "Exclude post regexes: x86_64-linux-gnu;/opt;/tmp;/lib64;/usr/local;${_site_dirs}"
 )
 install_dependency(
   TARGETS
@@ -112,3 +112,9 @@ if(BUILD_TESTING)
   message(STATUS "Enabling testing")
   add_test_subdirectory(tests)
 endif()
+
+set(profile_target_name profile)
+add_executable(${profile_target_name} profile.cpp)
+
+target_link_libraries(${profile_target_name} PUBLIC ${target_name_internal}
+  pybind11::embed)
